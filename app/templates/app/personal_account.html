@@ -98,7 +98,7 @@ tinymce.init({
       <h3>Мои статьи</h3>
       <ul>
           {% for entry in entries %}
-        <li><a href="{% url 'app:post-detail' entry.slug_headline %}">{{ entry.headline }}</a></li>
+              <li><a href="{% url 'app:post-detail' entry.slug_headline %}">{{ entry.headline }}</a><i class="fa fa-pencil"></i></li>
           {% endfor %}
       </ul>
     </div>

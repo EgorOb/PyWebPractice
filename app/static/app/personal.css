@@ -1,10 +1,11 @@
-body {
-  height: 100%;
-  background: #171717; /* Темный фон */
+html, body {
+    height: 100%;
+    margin: 0;
 }
 
 /* Основные стили авторского дашборда */
 .author-dashboard {
+  min-height: 100%;
   font-family: 'Roboto', sans-serif;
   display: flex; /* Изменено для трехколоночного дизайна */
   /*max-width: 1200px; !* Изменено для большей ширины *!*/
@@ -22,7 +23,6 @@ body {
 
 .main-content {
   flex: 2; /* Центральная колонка будет расти, занимая доступное пространство */
-  padding: 20px;
 }
 
 .sidebar {
