@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="{% static 'app/personal.css' %}">
 <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <script src="{% static 'tinymce/tinymce.min.js' %}"></script>
 <script>
@@ -35,7 +36,9 @@ tinymce.init({
 
   <div class="main-content">
     <div class="dashboard-section create-post">
-        <button id="create-post-button" type="button">Создать пост</button>
+        <button id="create-post-button" type="button">
+            <i class="fa fa-plus"></i>Создать пост
+        </button>
       <form id="create-post-form" action="." method="post" enctype="multipart/form-data" class="p-3" style="display: none">
         <!-- Форма для создания нового поста -->
         {% csrf_token %}
@@ -45,9 +48,9 @@ tinymce.init({
         <div class="form-group">
             {{ entry_form.headline|as_crispy_field }}
         </div>
-        <div class="form-group">
-            {{ entry_form.slug_headline|as_crispy_field }}
-        </div>
+{#        <div class="form-group">#}
+{#            {{ entry_form.slug_headline|as_crispy_field }}#}
+{#        </div>#}
         <div class="form-group">
             {{ entry_form.summary|as_crispy_field }}
         </div>
@@ -58,6 +61,7 @@ tinymce.init({
           <div class="form-group">
             {{ entry_form.pub_date|as_crispy_field }}
         </div>
+          <input type="text" id="authorSearch" placeholder="Поиск автора">
           <div class="form-group">
             {{ entry_form.authors|as_crispy_field }}
         </div>
@@ -67,8 +71,24 @@ tinymce.init({
           <div class="form-group">
             {{ entry_form.tags|as_crispy_field }}
         </div>
-
-        <button type="submit">Опубликовать</button>
+        <div>
+            <ul>
+                <span class='button-group'>
+                    <button type="submit">
+                        <i class="fa fa-blog"></i>Опубликовать
+                    </button>
+                </span>
+                <span class='button-group'>
+                    <button type="submit" class="delay">
+                        <i class="fa fa-clock"></i>Отложить публикацию
+                    </button></span>
+                <span class='button-group'>
+                    <button type="submit" class="draft">
+                        <i class="fa fa-pen-ruler"></i>Сохранить как черновик
+                    </button>
+                </span>
+            </ul>
+        </div>
       </form>
     </div>
   </div>
@@ -108,6 +128,47 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 });
 </script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Получаем элементы
+    var authorSelect = document.getElementById("id_authors");
+    var authorSearchInput = document.getElementById("authorSearch");
+
+    // Копируем все опции для последующей фильтрации
+    var allOptions = Array.from(authorSelect.options);
+
+    // Сохраняем исходные выбранные опции
+    var selectedOptions = Array.from(authorSelect.selectedOptions);
+
+    // Обработчик события ввода в поле поиска
+    authorSearchInput.addEventListener("input", function() {
+        var searchTerm = authorSearchInput.value.toLowerCase();
+
+        // Фильтруем опции в соответствии с введенным текстом
+        var filteredOptions = allOptions.filter(function(option) {
+            return option.text.toLowerCase().includes(searchTerm);
+        });
+
+        // Очищаем список
+        authorSelect.innerHTML = '';
+
+        // Добавляем отфильтрованные опции обратно в список
+        filteredOptions.forEach(function(option) {
+            authorSelect.appendChild(option.cloneNode(true));
+        });
+
+        // Восстанавливаем ранее выбранные опции
+        selectedOptions.forEach(function(selectedOption) {
+            var restoredOption = authorSelect.querySelector('option[value="' + selectedOption.value + '"]');
+            if (restoredOption) {
+                restoredOption.selected = true;
+            }
+        });
+    });
+});
+</script>
+
 
 </body>
 </html>

@@ -1,4 +1,5 @@
 body {
+  height: 100%;
   background: #171717; /* Темный фон */
 }
 
@@ -114,22 +115,48 @@ body {
   padding: 10px;
   margin-bottom: 20px;
   border: 1px solid #3c3c3c;
-  color: #dcdcdc;
+  color: #3c3c3c;
 }
 
 .create-post button {
-  background-color: #f48840;
+  background-color: #ff6c0c;
   color: #e6e6e6;
   padding: 10px 20px;
-  border: none;
+  border: 2px solid #e6e6e6;
+  border-radius: 10px;
   cursor: pointer;
-  text-transform: uppercase;
+  /*text-transform: uppercase;*/
 }
+
+
+.create-post button.delay {
+  background-color: #004247;
+}
+
+.create-post button.delay:hover {
+  background-color: #378486;
+}
+
+.create-post button.draft {
+  background-color: #006411;
+}
+
+.create-post button.draft:hover {
+  background-color: #45704b;
+}
+
 
 .create-post button:hover {
-  background-color: #fb9857;
+  background-color: #f48840;
 }
 
+.create-post button i {
+  margin-right: 8px;
+}
+
+.button-group{
+  margin: 10px 10px
+}
 
 /* Добавление адаптивности для маленьких экранов */
 @media (max-width: 768px) {
