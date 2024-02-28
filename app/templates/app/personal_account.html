@@ -96,11 +96,11 @@ tinymce.init({
   <div class="sidebar">
     <div class="dashboard-section articles-list">
       <h3>Мои статьи</h3>
-      <ul>
+      <ol>
           {% for entry in entries %}
-              <li><a href="{% url 'app:post-detail' entry.slug_headline %}">{{ entry.headline }}</a><i class="fa fa-pencil"></i></li>
+              <li><a href="{% url 'app:post-detail' entry.slug_headline %}">{{ entry.headline }}</a><a href="#"><i class="fa fa-pencil"></i></a></li>
           {% endfor %}
-      </ul>
+      </ol>
     </div>
 
     <div class="dashboard-section comments-list">
