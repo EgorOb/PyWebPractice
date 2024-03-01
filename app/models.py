@@ -231,7 +231,6 @@ class Entry(models.Model):
             # Если запись отложена, но дата не указана, установите текущую дату
             self.pub_date = datetime.now
 
-
         super().save(*args, **kwargs)
 
     def __str__(self):

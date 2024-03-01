@@ -34,12 +34,23 @@ tinymce.init({
   </div>
   </div>
 
+<div id="confirmationModal" class="modal">
+    <div class="modal-content">
+        <p>Вы уверены, что хотите удалить этот пост?</p>
+        <div>
+            <button id="confirmDelete">Да</button>
+            <button id="cancelDelete">Нет</button>
+        </div>
+    </div>
+</div>
+
+
   <div class="main-content">
     <div class="dashboard-section create-post">
         <button id="create-post-button" type="button">
             <i class="fa fa-plus"></i>Создать пост
         </button>
-      <form id="create-post-form" action="." method="post" enctype="multipart/form-data" class="p-3" style="display: none">
+      <form id="post-form" action="." method="post" enctype="multipart/form-data" class="p-3" style="display: none">
         <!-- Форма для создания нового поста -->
         {% csrf_token %}
         <div class="form-group">
@@ -98,7 +109,11 @@ tinymce.init({
       <h3>Мои статьи</h3>
       <ol>
           {% for entry in entries %}
-              <li><a href="{% url 'app:post-detail' entry.slug_headline %}">{{ entry.headline }}</a><a href="#"><i class="fa fa-pencil"></i></a></li>
+              <li data-entry-id="{{ entry.id }}">
+                <a href="{% url 'app:post-detail' entry.slug_headline %}">{{ entry.headline }}</a>
+                <a href="#" class="edit-post" data-entry-id="{{ entry.id }}"><i class="fa fa-pencil"></i></a>
+                <a href="#" class="delete-post" data-entry-id="{{ entry.id }}"><i class="fa fa-trash-can"></i></a>
+            </li>
           {% endfor %}
       </ol>
     </div>
@@ -117,7 +132,7 @@ tinymce.init({
 <script>
 document.addEventListener("DOMContentLoaded", function() {
   const createPostButton = document.getElementById("create-post-button");
-  const createPostForm = document.getElementById("create-post-form");
+  const createPostForm = document.getElementById("post-form");
 
   createPostButton.addEventListener("click", function() {
     if (createPostForm.style.display === "none" || createPostForm.style.display === "") {
@@ -128,6 +143,128 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 });
 </script>
+
+<script>
+    // Работа с обновлением поста
+document.addEventListener("DOMContentLoaded", function() {
+    const editPostLinks = document.querySelectorAll('.edit-post');
+
+    editPostLinks.forEach(function(link) {
+        link.addEventListener('click', function(event) {
+            event.preventDefault();
+            const entryId = this.getAttribute('data-entry-id');
+            fetch(`/entry/${entryId}`)
+                .then(response => response.json())
+                .then(data => fillUpdateForm(data))
+                .catch(error => console.error('Error:', error));
+        });
+    });
+
+    function fillUpdateForm(data) {
+        // Здесь вам нужно заполнить форму обновления данными из полученного JSON
+        // Например, вы можете использовать document.querySelector для поиска нужных полей и заполнить их значениями из data
+        // Пример: document.querySelector('#update-post-form #id_headline').value = data.headline;
+        document.querySelector('#post-form #id_headline').value = data.headline;
+        document.querySelector('#post-form #id_summary').value = data.summary;
+        tinymce.get('id_content').setContent(data.body_text);
+        {#//document.querySelector('#post-form #id_image').value = data.image;#}
+        {##}
+        // Снимаем выделение со всех авторов
+        {#Array.from(authorsSelect.options).forEach(option => {#}
+        {#    option.selected = false;#}
+        {#});#}
+
+            // Получение элемента select
+        var selectElement = document.getElementById('id_authors');
+
+        // Получение выбранных опций
+        var selectedOptions = Array.from(selectElement.selectedOptions).map(option => option.value);
+
+        // Вывод выбранных значений в консоль
+        console.log(selectedOptions);
+
+        {##}
+        {#// Выделяем авторов из данных JSON#}
+        {#data.authors.forEach(author => {#}
+        {#const option = Array.from(authorsSelect.options).find(opt => opt.text === author.name);#}
+        {#if (option) {#}
+        {#    option.selected = true;#}
+        {#}#}
+        {#});#}
+
+
+        // После заполнения формы, измените её стиль на "block", чтобы она стала видимой
+        const updatePostForm = document.getElementById('post-form');
+        updatePostForm.style.display = 'block';
+    };
+});
+</script>
+
+<script>
+    // обработчик удаления поста
+document.addEventListener("DOMContentLoaded", function() {
+    const deletePostLinks = document.querySelectorAll('.delete-post');
+    const confirmationModal = document.getElementById('confirmationModal');
+    const confirmDeleteButton = document.getElementById('confirmDelete');
+    const cancelDeleteButton = document.getElementById('cancelDelete');
+
+    let currentEntryId; // Хранит id текущего поста
+
+    // Добавляем обработчики событий для каждой ссылки на удаление
+    deletePostLinks.forEach(function(link) {
+        link.addEventListener('click', function(event) {
+            event.preventDefault();
+            currentEntryId = this.getAttribute('data-entry-id');
+            confirmationModal.style.display = 'flex'; // Показываем модальное окно
+        });
+    });
+
+    const csrftoken = getCookie('csrftoken');
+
+        // Функция для получения значения куки по имени
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    // Обработчик события для кнопки подтверждения удаления
+    confirmDeleteButton.addEventListener('click', function() {
+        // Отправка запроса на удаление
+        console.log("Удаление", currentEntryId)
+    fetch(`/entry/${currentEntryId}`, {
+    method: 'DELETE',
+    headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken
+    }
+}).then(response => {
+                if (response.ok) {
+                    // Если удаление прошло успешно, закрываем модальное окно
+                    confirmationModal.style.display = 'none';
+                    // Удаление строки с постом из интерфейса
+                    const postToDelete = document.querySelector(`li[data-entry-id="${currentEntryId}"]`);
+                    if (postToDelete) {
+                        postToDelete.remove();
+                    } else {
+                        console.error('Error: Элемент поста не найден.');
+                    }
+                } else {
+                    console.error('Error:', response.statusText);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    });
+
+    // Обработчик события для кнопки отмены удаления
+    cancelDeleteButton.addEventListener('click', function() {
+        // Закрываем модальное окно
+        confirmationModal.style.display = 'none';
+    });
+});
+</script>
+
+
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {

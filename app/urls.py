@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import IndexView, BlogView, AboutView, PostDetailView, \
     PersonalAccountView, LoginView, AboutServiceView, LogoutView
-
+from .views import EntryJson
 
 app_name = 'app'
 
@@ -14,5 +14,6 @@ urlpatterns = [
     path('personal/', PersonalAccountView.as_view(), name='personal-account'),
     path('login/<param>/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
+    path('entry/<int:id>', EntryJson.as_view(), name='entry'),
 ]
 

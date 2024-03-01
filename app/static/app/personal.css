@@ -171,3 +171,28 @@ html, body {
     flex: none; /* Сбрасываем flex-grow на маленьких экранах */
   }
 }
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 30%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Полупрозрачный фон */
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #fff; /* Цвет фона модального окна */
+    padding: 20px;
+    border-radius: 10px;
+}
+
+/* Стили для кнопок в модальном окне */
+.modal-content button {
+    margin: 0 10px;
+    padding: 10px;
+    cursor: pointer;
+}

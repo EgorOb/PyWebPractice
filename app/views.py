@@ -1,4 +1,5 @@
 from django.shortcuts import render, get_object_or_404, resolve_url, redirect
+from django.http import JsonResponse
 from django.views.generic import View, TemplateView, DetailView, CreateView, FormView
 from .models import Blog, Entry, Tag, Comment, AuthorProfile
 from .forms import CommentForm, CustomUserCreationForm, EntryForm
@@ -8,6 +9,8 @@ from django.contrib.auth.models import User
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.db.models import F
+from django.views.decorators.csrf import csrf_exempt
 
 
 class IndexView(View):
@@ -189,3 +192,41 @@ class LogoutView(View):
     def get(self, request):
         logout(request)
         return redirect("/")
+
+
+class EntryJson(View):
+    def get(self, request, id):
+        entry = Entry.objects.filter(id=id)
+        if entry:
+            entry = entry.first()
+            entry_dict = {
+                          "headline": entry.headline,
+                          "summary": entry.summary,
+                          "body_text": entry.body_text,
+                          "image": entry.image.name,
+                          "pub_date": entry.pub_date,
+                          "status": entry.status,
+                          "authors": list(entry.authors.annotate(name=F("user__username")).values("user_id", "name")),
+                          "tags": list(entry.tags.values("id", "name")),
+                          }
+            return JsonResponse(entry_dict, safe=False,
+                                json_dumps_params={"ensure_ascii": False,
+                                                   "indent": 4})
+        return JsonResponse({"message": "Нет такой записи"}, status=404,
+                            json_dumps_params={"ensure_ascii": False,
+                                               "indent": 4})
+    def put(self, request, id):
+        print()
+
+    def delete(self, request, id):
+        entry = Entry.objects.filter(id=id)
+        if entry:
+            entry.first().delete()
+            return JsonResponse({"message": "Успешное удаление"}, status=203,
+                                json_dumps_params={"ensure_ascii": False,
+                                                   "indent": 4})
+        return JsonResponse({"message": "Нет такой записи"}, status=404,
+                            json_dumps_params={"ensure_ascii": False,
+                                               "indent": 4})
+
+
