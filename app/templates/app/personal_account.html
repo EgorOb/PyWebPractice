@@ -35,7 +35,7 @@ tinymce.init({
   </div>
 
 <div id="confirmationModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content-delete">
         <p>Вы уверены, что хотите удалить этот пост?</p>
         <div>
             <button id="confirmDelete">Да</button>
@@ -53,52 +53,53 @@ tinymce.init({
       <form id="post-form" action="." method="post" enctype="multipart/form-data" class="p-3" style="display: none">
         <!-- Форма для создания нового поста -->
         {% csrf_token %}
-        <div class="form-group">
+
             {{ entry_form.blog|as_crispy_field }}
-        </div>
-        <div class="form-group">
+
             {{ entry_form.headline|as_crispy_field }}
-        </div>
+
 {#        <div class="form-group">#}
 {#            {{ entry_form.slug_headline|as_crispy_field }}#}
 {#        </div>#}
-        <div class="form-group">
+
             {{ entry_form.summary|as_crispy_field }}
-        </div>
+
           <div class="form-group">
 {#            {{ entry_form.body_text|as_crispy_field }}#}
             <textarea id="id_content" name="body_text" placeholder="Содержимое поста"></textarea>
         </div>
+
           <div class="form-group">
-            {{ entry_form.pub_date|as_crispy_field }}
-        </div>
-          <input type="text" id="authorSearch" placeholder="Поиск автора">
-          <div class="form-group">
+              <input type="text" id="authorSearch" placeholder="Поиск автора">
             {{ entry_form.authors|as_crispy_field }}
         </div>
-          <div class="form-group">
             {{ entry_form.image|as_crispy_field }}
-        </div>
-          <div class="form-group">
+
             {{ entry_form.tags|as_crispy_field }}
+
+          <div class="form-group">
+        <label for="id_select">Дата публикации</label>
+             <div>
+             <select name="blog" class="select form-control" required="" id="id_select">
+                  <option value="1" selected>Опубликовать сейчас</option>
+                  <option value="2">Опубликовать позже</option>
+             </select>
+             </div>
+          </div>
+        <div class="form-group" style="display: none" data-pub-date>
+        {{ entry_form.pub_date }}
         </div>
-        <div>
-            <ul>
-                <span class='button-group'>
-                    <button type="submit">
-                        <i class="fa fa-blog"></i>Опубликовать
-                    </button>
-                </span>
-                <span class='button-group'>
-                    <button type="submit" class="delay">
-                        <i class="fa fa-clock"></i>Отложить публикацию
-                    </button></span>
-                <span class='button-group'>
-                    <button type="submit" class="draft">
-                        <i class="fa fa-pen-ruler"></i>Сохранить как черновик
-                    </button>
-                </span>
-            </ul>
+
+        <div class='button-group'>
+            <button type="submit" style="display: block">
+                <i class="fa fa-blog"></i>Опубликовать
+            </button>
+            <button type="submit" class="delay" style="display: none">
+                <i class="fa fa-clock"></i>Отложить публикацию
+            </button>
+            <button type="submit" class="draft">
+                <i class="fa fa-pen-ruler"></i>Сохранить как черновик
+            </button>
         </div>
       </form>
     </div>
@@ -128,6 +129,29 @@ tinymce.init({
     </div>
   </div>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const selectElement = document.getElementById("id_select");
+        const pubDateElement = document.querySelector('.form-group[data-pub-date]');
+        const publishNowButton = document.querySelector('.button-group button:nth-child(1)');
+        const publishLaterButton = document.querySelector('.button-group button:nth-child(2)');
+
+        selectElement.addEventListener('change', function() {
+            const selectedValue = this.value;
+
+            if (selectedValue === '1') {  // Опубликовать сейчас
+                pubDateElement.style.display = 'none';
+                publishNowButton.style.display = 'block';
+                publishLaterButton.style.display = 'none';
+            } else if (selectedValue === '2') {  // Опубликовать позже
+                pubDateElement.style.display = 'block';
+                publishNowButton.style.display = 'none';
+                publishLaterButton.style.display = 'block';
+            }
+        });
+    });
+</script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
@@ -161,36 +185,45 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     function fillUpdateForm(data) {
-        // Здесь вам нужно заполнить форму обновления данными из полученного JSON
-        // Например, вы можете использовать document.querySelector для поиска нужных полей и заполнить их значениями из data
-        // Пример: document.querySelector('#update-post-form #id_headline').value = data.headline;
+        const blogSelect = document.getElementById('id_blog');
+
+        // Ищем опцию с нужным текстом
+        let desiredOption = Array.from(blogSelect.options).find(option => option.text === data.blog_name);
+
+        // Устанавливаем найденный <option> как выбранный
+        if (desiredOption) {
+            desiredOption.selected = true;
+        }
+
         document.querySelector('#post-form #id_headline').value = data.headline;
         document.querySelector('#post-form #id_summary').value = data.summary;
         tinymce.get('id_content').setContent(data.body_text);
-        {#//document.querySelector('#post-form #id_image').value = data.image;#}
-        {##}
-        // Снимаем выделение со всех авторов
-        {#Array.from(authorsSelect.options).forEach(option => {#}
-        {#    option.selected = false;#}
-        {#});#}
+        {#document.querySelector('#post-form #id_image').value = data.image;#}
 
-            // Получение элемента select
-        var selectElement = document.getElementById('id_authors');
 
-        // Получение выбранных опций
-        var selectedOptions = Array.from(selectElement.selectedOptions).map(option => option.value);
+        // Получение элемента select
+        const selectAuthor = document.getElementById('id_authors');
+        // Перебираем авторов в JSON
+        data.authors.forEach(author => {
+            // Ищем опцию с нужным именем автора
+            let desiredOption = Array.from(selectAuthor.options).find(option => option.text === author.name);
 
-        // Вывод выбранных значений в консоль
-        console.log(selectedOptions);
+            // Если найдено совпадение, устанавливаем эту опцию выбранной
+            if (desiredOption) {
+                desiredOption.selected = true;
+            }
+        });
 
-        {##}
-        {#// Выделяем авторов из данных JSON#}
-        {#data.authors.forEach(author => {#}
-        {#const option = Array.from(authorsSelect.options).find(opt => opt.text === author.name);#}
-        {#if (option) {#}
-        {#    option.selected = true;#}
-        {#}#}
-        {#});#}
+        // Получение элемента select
+        const selectTag = document.getElementById('id_tags');
+        data.tags.forEach(tag => {
+            let desiredOption = Array.from(selectTag.options).find(option => option.text === tag.name);
+
+            // Если найдено совпадение, устанавливаем эту опцию выбранной
+            if (desiredOption) {
+                desiredOption.selected = true;
+            }
+        });
 
 
         // После заполнения формы, измените её стиль на "block", чтобы она стала видимой

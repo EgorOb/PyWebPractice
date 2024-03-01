@@ -127,10 +127,10 @@ class PersonalAccountView(LoginRequiredMixin, PermissionRequiredMixin, TemplateV
                   body_text=form.cleaned_data.get("body_text"),
                   image=form.cleaned_data.get("image"),
                   pub_date=form.cleaned_data.get("pub_date"))
-            profile_author = get_object_or_404(AuthorProfile,
-                                               user=self.request.user)
+            # profile_author = get_object_or_404(AuthorProfile,
+            #                                    user=self.request.user)
             entry.save()
-            entry.authors.add(profile_author)
+            entry.authors.add(*form.cleaned_data.get("authors"))
             entry.tags.add(*form.cleaned_data.get("tags"))
 
         return redirect('app:personal-account')
@@ -199,7 +199,7 @@ class EntryJson(View):
         entry = Entry.objects.filter(id=id)
         if entry:
             entry = entry.first()
-            entry_dict = {
+            entry_dict = {"blog_name": entry.blog.name,
                           "headline": entry.headline,
                           "summary": entry.summary,
                           "body_text": entry.body_text,
