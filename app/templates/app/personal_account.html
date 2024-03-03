@@ -34,33 +34,28 @@ tinymce.init({
   </div>
   </div>
 
-<div id="confirmationModal" class="modal">
-    <div class="modal-content-delete">
-        <p>Вы уверены, что хотите удалить этот пост?</p>
-        <div>
-            <button id="confirmDelete">Да</button>
-            <button id="cancelDelete">Нет</button>
+    <div id="confirmationModal" class="modal">
+        <div class="modal-content-delete">
+            <p>Вы уверены, что хотите удалить этот пост?</p>
+            <div>
+                <button id="confirmDelete">Да</button>
+                <button id="cancelDelete">Нет</button>
+            </div>
         </div>
     </div>
-</div>
 
-
-  <div class="main-content">
+    <div class="main-content">
     <div class="dashboard-section create-post">
         <button id="create-post-button" type="button">
-            <i class="fa fa-plus"></i>Создать пост
+            <i class="fa fa-plus"></i>Новый пост
         </button>
-      <form id="post-form" action="." method="post" enctype="multipart/form-data" class="p-3" style="display: none">
-        <!-- Форма для создания нового поста -->
+      <form id="post-form" action="/entry/" method="post" data-method="post" enctype="multipart/form-data" class="p-3">
+        <!-- Форма для работы с постом -->
         {% csrf_token %}
 
             {{ entry_form.blog|as_crispy_field }}
 
             {{ entry_form.headline|as_crispy_field }}
-
-{#        <div class="form-group">#}
-{#            {{ entry_form.slug_headline|as_crispy_field }}#}
-{#        </div>#}
 
             {{ entry_form.summary|as_crispy_field }}
 
@@ -70,10 +65,11 @@ tinymce.init({
         </div>
 
           <div class="form-group">
-              <input type="text" id="authorSearch" placeholder="Поиск автора">
+              <input type="text" class="text_search" id="authorSearch" placeholder="Поиск автора">
             {{ entry_form.authors|as_crispy_field }}
         </div>
             {{ entry_form.image|as_crispy_field }}
+         <img id="preview_image" src="" alt="Preview Image" style="max-width: 50%; display: none; padding-bottom: 20px">
 
             {{ entry_form.tags|as_crispy_field }}
 
@@ -154,23 +150,108 @@ tinymce.init({
 </script>
 
 <script>
+    // Отправка POST, PUT метода
+    document.addEventListener("DOMContentLoaded", function () {
+        //const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        let form = document.getElementById('post-form')
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            // Создайте новый объект FormData внутри функции обработчика
+            let formData = new FormData(form);
+            console.log(formData);
+
+            let csrfToken = formData.get('csrfmiddlewaretoken');
+
+            let requestOptions = {
+                method: form.dataset.method.toUpperCase(),  // Преобразовываем в верхний регистр
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                },
+                body: formData,
+            };
+
+            // Добавьте 'Content-Type' в headers, если это PUT-запрос
+            if (form.dataset.method.toUpperCase() === 'PUT') {
+                requestOptions.headers['Content-Type'] = 'multipart/form-data';
+            };
+
+            fetch(form.action, requestOptions)
+                .then(response => response.json())
+                .then(data => console.log('Success:', data))
+                .catch(error => console.error('Error:', error));
+        });
+    });
+</script>
+
+
+<script>
+    // Действия при нажатии на кнопку "Новый пост"
 document.addEventListener("DOMContentLoaded", function() {
   const createPostButton = document.getElementById("create-post-button");
   const createPostForm = document.getElementById("post-form");
+  const previewImage = document.getElementById("preview_image");
+  const pubDateElement = document.querySelector('.form-group[data-pub-date]');
+  const publishNowButton = document.querySelector('.button-group button:nth-child(1)');
+  const publishLaterButton = document.querySelector('.button-group button:nth-child(2)');
 
   createPostButton.addEventListener("click", function() {
-    if (createPostForm.style.display === "none" || createPostForm.style.display === "") {
-      createPostForm.style.display = "block";
-    } else {
-      createPostForm.style.display = "none";
-    }
+      // Сбросьте значения всех полей формы
+      createPostForm.reset();
+      previewImage.src = ""; // Установите путь изображения
+      previewImage.style.display = "none"; // Скрыть элемент img
+      pubDateElement.style.display = 'none';
+      publishNowButton.style.display = 'block';
+      publishLaterButton.style.display = 'none';
+      createPostForm.dataset.method = 'post';
+      createPostForm.action = `/entry/`;
+
+
+    //if (createPostForm.style.display === "none" || createPostForm.style.display === "") {
+    //  createPostForm.style.display = "block";
+    //} else {
+    //  createPostForm.style.display = "none";
+    //}
   });
 });
 </script>
 
+{#<script>#}
+{#    // Отображение превью картинки#}
+{#    document.addEventListener("DOMContentLoaded", function() {#}
+{#        const imageInput = document.getElementById("id_image");#}
+{#        const imagePreview = document.getElementById("preview_image");#}
+{##}
+{#        // Добавьте обработчик события для изменения значения input#}
+{#        imageInput.addEventListener("change", function() {#}
+{#            // Отображение превью изображения#}
+{#            displayImagePreview(this);#}
+{#        });#}
+{##}
+{#        function displayImagePreview(input) {#}
+{#            if (input.files && input.files[0]) {#}
+{#                const reader = new FileReader();#}
+{##}
+{#                reader.onload = function(e) {#}
+{#                    // Устанавливаем атрибут src для элемента img#}
+{#                    imagePreview.src = e.target.result;#}
+{#                    // Отображаем элемент img#}
+{#                    imagePreview.style.display = "block";#}
+{#                };#}
+{##}
+{#                // Читаем файл в формате base64#}
+{#                reader.readAsDataURL(input.files[0]);#}
+{#            }#}
+{#        }#}
+{#    });#}
+{#</script>#}
+
+
+
 <script>
-    // Работа с обновлением поста
+    // Получение данных поста
 document.addEventListener("DOMContentLoaded", function() {
+    const postForm = document.getElementById('post-form');
     const editPostLinks = document.querySelectorAll('.edit-post');
 
     editPostLinks.forEach(function(link) {
@@ -198,8 +279,15 @@ document.addEventListener("DOMContentLoaded", function() {
         document.querySelector('#post-form #id_headline').value = data.headline;
         document.querySelector('#post-form #id_summary').value = data.summary;
         tinymce.get('id_content').setContent(data.body_text);
-        {#document.querySelector('#post-form #id_image').value = data.image;#}
 
+        document.getElementById('id_image').value = '';
+        const previewImage = document.getElementById("preview_image");
+
+        // Если есть путь к изображению в JSON, отобразите его в элементе img
+        if (data.image) {
+            previewImage.src = data.image; // Установите путь изображения
+            previewImage.style.display = "block"; // Покажите элемент img
+        }
 
         // Получение элемента select
         const selectAuthor = document.getElementById('id_authors');
@@ -225,10 +313,9 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
 
+        postForm.action = `/entry/${data.entry_id}/`;
+        postForm.dataset.method = "put";
 
-        // После заполнения формы, измените её стиль на "block", чтобы она стала видимой
-        const updatePostForm = document.getElementById('post-form');
-        updatePostForm.style.display = 'block';
     };
 });
 </script>
@@ -271,22 +358,22 @@ document.addEventListener("DOMContentLoaded", function() {
         'Content-Type': 'application/json',
         'X-CSRFToken': csrftoken
     }
-}).then(response => {
-                if (response.ok) {
-                    // Если удаление прошло успешно, закрываем модальное окно
-                    confirmationModal.style.display = 'none';
-                    // Удаление строки с постом из интерфейса
-                    const postToDelete = document.querySelector(`li[data-entry-id="${currentEntryId}"]`);
-                    if (postToDelete) {
-                        postToDelete.remove();
-                    } else {
-                        console.error('Error: Элемент поста не найден.');
-                    }
-                } else {
-                    console.error('Error:', response.statusText);
-                }
-            })
-            .catch(error => console.error('Error:', error));
+    }).then(response => {
+        if (response.ok) {
+            // Если удаление прошло успешно, закрываем модальное окно
+            confirmationModal.style.display = 'none';
+            // Удаление строки с постом из интерфейса
+            const postToDelete = document.querySelector(`li[data-entry-id="${currentEntryId}"]`);
+            if (postToDelete) {
+                postToDelete.remove();
+            } else {
+                console.error('Error: Элемент поста не найден.');
+            }
+        } else {
+            console.error('Error:', response.statusText);
+        }
+    })
+    .catch(error => console.error('Error:', error));
     });
 
     // Обработчик события для кнопки отмены удаления

@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, resolve_url, redirect
-from django.http import JsonResponse
+from django.http import JsonResponse, QueryDict
 from django.views.generic import View, TemplateView, DetailView, CreateView, FormView
 from .models import Blog, Entry, Tag, Comment, AuthorProfile
 from .forms import CommentForm, CustomUserCreationForm, EntryForm
@@ -11,6 +11,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMix
 from django.core.exceptions import PermissionDenied
 from django.db.models import F
 from django.views.decorators.csrf import csrf_exempt
+import json
+from django.utils.decorators import method_decorator
 
 
 class IndexView(View):
@@ -194,16 +196,18 @@ class LogoutView(View):
         return redirect("/")
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class EntryJson(View):
     def get(self, request, id):
         entry = Entry.objects.filter(id=id)
         if entry:
             entry = entry.first()
-            entry_dict = {"blog_name": entry.blog.name,
+            entry_dict = {"entry_id": entry.id,
+                          "blog_name": entry.blog.name,
                           "headline": entry.headline,
                           "summary": entry.summary,
                           "body_text": entry.body_text,
-                          "image": entry.image.name,
+                          "image": entry.image.url,
                           "pub_date": entry.pub_date,
                           "status": entry.status,
                           "authors": list(entry.authors.annotate(name=F("user__username")).values("user_id", "name")),
@@ -215,8 +219,53 @@ class EntryJson(View):
         return JsonResponse({"message": "Нет такой записи"}, status=404,
                             json_dumps_params={"ensure_ascii": False,
                                                "indent": 4})
+
+    def post(self, request):
+        form = EntryForm(request.POST, request.FILES)
+        if form.is_valid():
+            entry = Entry(blog=form.cleaned_data.get("blog"),
+                          headline=form.cleaned_data.get("headline"),
+                          slug_headline=form.cleaned_data.get("slug_headline"),
+                          summary=form.cleaned_data.get("summary"),
+                          body_text=form.cleaned_data.get("body_text"),
+                          image=form.cleaned_data.get("image"),
+                          pub_date=form.cleaned_data.get("pub_date"))
+
+            entry.save()
+            entry.authors.add(*form.cleaned_data.get("authors"))
+            entry.tags.add(*form.cleaned_data.get("tags"))
+            return JsonResponse({'message': 'Пост успешно создан'},
+                                status=200,
+                                json_dumps_params={"ensure_ascii": False,
+                                                   "indent": 4})
+
+        return JsonResponse({"message": "Что-то пошло не так"}, status=400,
+                            json_dumps_params={"ensure_ascii": False,
+                                               "indent": 4})
+
     def put(self, request, id):
-        print()
+        # form = EntryForm(request.POST, request.FILES)
+        # Получите данные из PUT-запроса
+        put_data = request.body.decode('utf-8')
+
+        # Преобразуйте данные в словарь JSON
+        data_dict = json.loads(put_data)
+
+        # Создайте экземпляр формы и передайте данные
+        form = EntryForm(data_dict)
+
+        if form.is_valid():
+            # Данные валидны, обработайте их
+            # ...
+
+            return JsonResponse({'message': 'Данные обработаны успешно'},
+                                status=200,
+                                json_dumps_params={"ensure_ascii": False,
+                                                   "indent": 4})
+
+        return JsonResponse({"message": "Что-то пошло не так"}, status=400,
+                            json_dumps_params={"ensure_ascii": False,
+                                               "indent": 4})
 
     def delete(self, request, id):
         entry = Entry.objects.filter(id=id)

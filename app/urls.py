@@ -14,6 +14,7 @@ urlpatterns = [
     path('personal/', PersonalAccountView.as_view(), name='personal-account'),
     path('login/<param>/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
-    path('entry/<int:id>', EntryJson.as_view(), name='entry'),
+    path('entry/', EntryJson.as_view(), name='entry-post'),
+    path('entry/<int:id>/', EntryJson.as_view(), name='entry'),
 ]
 

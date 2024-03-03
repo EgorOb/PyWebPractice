@@ -214,9 +214,13 @@ class Entry(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES,
                               default=PUBLISHED)
     mod_date = models.DateField(auto_now=True)
-    authors = models.ManyToManyField(AuthorProfile, related_name="entrys",
+    authors = models.ManyToManyField(AuthorProfile,
+                                     related_name="entrys",
                                      verbose_name="авторы",
-                                     help_text="для HTML формы укажите соавторов, если они есть")
+                                     help_text="""для HTML формы укажите 
+                                     соавторов, если они есть.
+                                     Зажмите Ctrl, чтобы выделить несколько 
+                                     авторов""")
     number_of_comments = models.IntegerField(default=0)
     number_of_pingbacks = models.IntegerField(default=0)
     rating = models.FloatField(default=0.0)

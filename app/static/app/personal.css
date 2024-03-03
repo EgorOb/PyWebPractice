@@ -118,6 +118,12 @@ html, body {
   color: #3c3c3c;
 }
 
+.create-post input[type="text"].text_search
+{
+  padding: 5px;
+  margin-bottom: 0px;
+}
+
 .create-post button {
   background-color: #ff6c0c;
   color: #e6e6e6;
