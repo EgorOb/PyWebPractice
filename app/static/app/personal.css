@@ -97,6 +97,42 @@ html, body {
   border-bottom: none;
 }
 
+.published-entries-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.published-entries-table th,
+.published-entries-table td {
+    padding: 8px; /* Добавляем отступы внутри ячеек */
+    text-align: left; /* Выравниваем текст по левому краю */
+}
+
+.published-entries-table td:nth-child(2) {
+    width: 100%; /* Вторая колонка занимает всё доступное пространство */
+}
+
+
+.published-entries-table th:last-child,
+.published-entries-table td:last-child {
+    text-align: right; /* Выравниваем содержимое последних двух колонок по правому краю */
+}
+.published-entries-table th a,
+.published-entries-table td a{
+  color: #e6e6e6;
+  text-decoration: none;
+  font-size: 18px;
+  font-weight: 700;
+
+}
+
+.published-entries-table th a:hover,
+.published-entries-table td a:hover{
+  color: #f48840;
+}
+
+
+
 /* Стили для списка комментариев */
 .comments-list li {
   color: #20232e;
@@ -135,11 +171,11 @@ html, body {
 }
 
 
-.create-post button.delay {
+.create-post button.scheduled {
   background-color: #004247;
 }
 
-.create-post button.delay:hover {
+.create-post button.scheduled:hover {
   background-color: #378486;
 }
 

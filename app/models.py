@@ -1,5 +1,5 @@
 from django.db import models
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from django.core.validators import RegexValidator
 from PIL import Image
 from django.contrib.auth.models import User
@@ -217,8 +217,8 @@ class Entry(models.Model):
     authors = models.ManyToManyField(AuthorProfile,
                                      related_name="entrys",
                                      verbose_name="авторы",
-                                     help_text="""для HTML формы укажите 
-                                     соавторов, если они есть.
+                                     help_text="""Укажите 
+                                     автора и соавторов, если они есть.
                                      Зажмите Ctrl, чтобы выделить несколько 
                                      авторов""")
     number_of_comments = models.IntegerField(default=0)
@@ -231,9 +231,9 @@ class Entry(models.Model):
             # Генерация транслитерированного slug на основе headline перед сохранением
             slug_headline = "-".join(translit(self.headline, 'ru', reversed=True).lower().split())
             self.slug_headline = make_slug(slug_headline)
-        if self.status == self.SCHEDULED and not self.pub_date:
+        if self.status in [self.SCHEDULED, self.PUBLISHED] and not self.pub_date:
             # Если запись отложена, но дата не указана, установите текущую дату
-            self.pub_date = datetime.now
+            self.pub_date = datetime.now(timezone.utc)
 
         super().save(*args, **kwargs)
 

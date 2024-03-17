@@ -1,5 +1,8 @@
+import time
+
 from django.shortcuts import render, get_object_or_404, resolve_url, redirect
 from django.http import JsonResponse, QueryDict
+from django.utils.datastructures import MultiValueDict
 from django.views.generic import View, TemplateView, DetailView, CreateView, FormView
 from .models import Blog, Entry, Tag, Comment, AuthorProfile
 from .forms import CommentForm, CustomUserCreationForm, EntryForm
@@ -13,6 +16,8 @@ from django.db.models import F
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.utils.decorators import method_decorator
+from django.core.files.uploadedfile import InMemoryUploadedFile
+import io
 
 
 class IndexView(View):
@@ -114,7 +119,9 @@ class PersonalAccountView(LoginRequiredMixin, PermissionRequiredMixin, TemplateV
         entries = profile_author.entrys.all()
         comments = Comment.objects.filter(entry__in=entries).filter(parent__isnull=True).order_by('-created_at')[:5]
         context["profile_author"] = profile_author
-        context["entries"] = entries
+        context["entries_published"] = entries.filter(status="published")
+        context["entries_scheduled"] = entries.filter(status="scheduled")
+        context["entries_draft"] = entries.filter(status="draft")
         context["comments"] = comments
         context['entry_form'] = EntryForm()  # Добавляем форму в контекст
         return context
@@ -229,7 +236,8 @@ class EntryJson(View):
                           summary=form.cleaned_data.get("summary"),
                           body_text=form.cleaned_data.get("body_text"),
                           image=form.cleaned_data.get("image"),
-                          pub_date=form.cleaned_data.get("pub_date"))
+                          pub_date=form.cleaned_data.get("pub_date"),
+                          status=form.cleaned_data.get("status"))
 
             entry.save()
             entry.authors.add(*form.cleaned_data.get("authors"))
@@ -246,17 +254,51 @@ class EntryJson(View):
     def put(self, request, id):
         # form = EntryForm(request.POST, request.FILES)
         # Получите данные из PUT-запроса
-        put_data = request.body.decode('utf-8')
-
+        put_data = request.body
+        boundary = request.content_params["boundary"]
+        parts = put_data.split(boundary.encode())
         # Преобразуйте данные в словарь JSON
-        data_dict = json.loads(put_data)
+        # data_dict = json.loads(put_data)
+
+        data_dict = MultiValueDict()
+        data_dict_file = MultiValueDict()
+
+        for part in parts:
+            if b'Content-Disposition: form-data' in part:
+                # Если часть содержит данные формы
+                headers, body = part.split(b'\r\n\r\n', 1)
+                name = headers.split(b'name="')[1].split(b'"')[0].decode('utf-8')
+                if name != 'image':
+                    value = body.strip(b'\r\n--').decode('utf-8')
+                    data_dict.appendlist(name, value)
+                else:
+                    filename, content_type = headers.split(b'filename="')[1].split(b'"')
+                    if filename:
+                        filename, content_type = filename.decode("utf-8"), content_type.split(b': ')[-1].decode("utf-8")
+                        file_data = body.strip(b'\r\n')
+                        file_io = io.BytesIO(file_data)
+                        image_file = InMemoryUploadedFile(file_io, None, filename, content_type, len(file_data), None)
+                        data_dict_file.appendlist(name, image_file)
+
 
         # Создайте экземпляр формы и передайте данные
-        form = EntryForm(data_dict)
+        form = EntryForm(data_dict, data_dict_file)
 
         if form.is_valid():
             # Данные валидны, обработайте их
             # ...
+            entry = get_object_or_404(Entry, id=id)
+
+            # Обновляем поля экземпляра Entry на основе очищенных данных формы
+            for field in form.cleaned_data.keys():
+                if field not in ['authors', 'tags']:
+                    setattr(entry, field, form.cleaned_data.get(field))
+
+            # Сохраняем обновленный экземпляр Entry
+            entry.save()
+
+            entry.authors.set(form.cleaned_data.get("authors"))
+            entry.tags.set(form.cleaned_data.get("tags"))
 
             return JsonResponse({'message': 'Данные обработаны успешно'},
                                 status=200,

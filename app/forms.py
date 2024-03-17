@@ -25,7 +25,7 @@ class EntryForm(forms.ModelForm):
     class Meta:
         model = Entry
         fields = ['blog', 'headline', 'slug_headline', 'summary',
-                  'body_text', 'pub_date', 'authors', 'image', 'tags']
+                  'body_text', 'pub_date', 'authors', 'image', 'tags', 'status']
         widgets = {
             'pub_date': forms.DateTimeInput(
                 attrs={'type': 'datetime-local'}),

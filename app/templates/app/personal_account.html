@@ -44,12 +44,31 @@ tinymce.init({
         </div>
     </div>
 
+    <div class="modal" id="infoModal">
+        <div class="modal-dialog">
+            <div class="modal-content text-black-50">
+                <!-- Заголовок модального окна -->
+                <div class="modal-header">
+                    <h4 class="modal-title">Успех!</h4>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <!-- Текст и кнопка в теле модального окна -->
+                <div class="modal-body text-center">
+                    Пост успешно создан!
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
     <div class="main-content">
     <div class="dashboard-section create-post">
         <button id="create-post-button" type="button">
             <i class="fa fa-plus"></i>Новый пост
         </button>
-      <form id="post-form" action="/entry/" method="post" data-method="post" enctype="multipart/form-data" class="p-3">
+      <form id="post-form" action="/entry/" method="post" data-method="post" enctype="multipart/form-data" class="p-3" style="display: none">
         <!-- Форма для работы с постом -->
         {% csrf_token %}
 
@@ -73,6 +92,8 @@ tinymce.init({
 
             {{ entry_form.tags|as_crispy_field }}
 
+          <div class="form-group" style="display: none">
+            </div>
           <div class="form-group">
         <label for="id_select">Дата публикации</label>
              <div>
@@ -84,16 +105,17 @@ tinymce.init({
           </div>
         <div class="form-group" style="display: none" data-pub-date>
         {{ entry_form.pub_date }}
+            <input type="hidden" name="status" id="status" value="published">
         </div>
 
         <div class='button-group'>
-            <button type="submit" style="display: block">
+            <button type="submit" class="published" style="display: block" onclick="setStatus('published')">
                 <i class="fa fa-blog"></i>Опубликовать
             </button>
-            <button type="submit" class="delay" style="display: none">
+            <button type="submit" class="scheduled" style="display: none" onclick="setStatus('scheduled')">
                 <i class="fa fa-clock"></i>Отложить публикацию
             </button>
-            <button type="submit" class="draft">
+            <button type="submit" class="draft" onclick="setStatus('draft')">
                 <i class="fa fa-pen-ruler"></i>Сохранить как черновик
             </button>
         </div>
@@ -103,329 +125,95 @@ tinymce.init({
 
   <div class="sidebar">
     <div class="dashboard-section articles-list">
-      <h3>Мои статьи</h3>
-      <ol>
-          {% for entry in entries %}
-              <li data-entry-id="{{ entry.id }}">
-                <a href="{% url 'app:post-detail' entry.slug_headline %}">{{ entry.headline }}</a>
-                <a href="#" class="edit-post" data-entry-id="{{ entry.id }}"><i class="fa fa-pencil"></i></a>
-                <a href="#" class="delete-post" data-entry-id="{{ entry.id }}"><i class="fa fa-trash-can"></i></a>
-            </li>
-          {% endfor %}
-      </ol>
+    <h3><i class="fa fa-blog"></i> Опубликовано</h3>
+    <table id="table_published" class="published-entries-table">
+        <thead>
+            <tr>
+                <th>№</th>
+                <th>Название</th>
+                <th>Время</th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries_published %}
+            <tr data-entry-id="{{ entry.id }}">
+                <td>{{ forloop.counter }}</td> <!-- Порядковый номер -->
+                <td><a href="{% url 'app:post-detail' entry.slug_headline %}">{{ entry.headline }}</a></td> <!-- Название -->
+                <td>{{ entry.pub_date|date:"d.m.y H:i" }}</td> <!-- Время -->
+                <td><a href="#" class="edit-post" data-entry-id="{{ entry.id }}"><i class="fa fa-pencil"></i></a></td> <!-- Редактировать -->
+                <td><a href="#" class="delete-post" data-entry-id="{{ entry.id }}"><i class="fa fa-trash-can"></i></a></td> <!-- Удалить -->
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+  <div class="dashboard-section articles-list">
+      <h3><i class="fa fa-clock"></i>  Отложено</h3>
+      <table id="table_scheduled" class="published-entries-table">
+        <thead>
+            <tr>
+                <th>№</th>
+                <th>Название</th>
+                <th>Время</th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries_scheduled %}
+            <tr data-entry-id="{{ entry.id }}">
+                <td>{{ forloop.counter }}</td> <!-- Порядковый номер -->
+                <td><a href="{% url 'app:post-detail' entry.slug_headline %}">{{ entry.headline }}</a></td> <!-- Название -->
+                <td>{{ entry.pub_date|date:"d.m.y H:i" }}</td> <!-- Время -->
+                <td><a href="#" class="edit-post" data-entry-id="{{ entry.id }}"><i class="fa fa-pencil"></i></a></td> <!-- Редактировать -->
+                <td><a href="#" class="delete-post" data-entry-id="{{ entry.id }}"><i class="fa fa-trash-can"></i></a></td> <!-- Удалить -->
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
     </div>
 
-    <div class="dashboard-section comments-list">
-      <h3>Новые комментарии на статьях</h3>
+  <div class="dashboard-section articles-list">
+      <h3><i class="fa fa-pen-ruler"></i> Черновики</h3>
+      <table id="table_draft" class="published-entries-table">
+        <thead>
+            <tr>
+                <th>№</th>
+                <th>Название</th>
+                <th></th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries_draft %}
+            <tr data-entry-id="{{ entry.id }}">
+                <td>{{ forloop.counter }}</td> <!-- Порядковый номер -->
+                <td><a href="{% url 'app:post-detail' entry.slug_headline %}">{{ entry.headline }}</a></td> <!-- Название -->
+                <td>{{ entry.pub_date|date:"d.m.y H:i" }}</td> <!-- Время -->
+                <td><a href="#" class="edit-post" data-entry-id="{{ entry.id }}"><i class="fa fa-pencil"></i></a></td> <!-- Редактировать -->
+                <td><a href="#" class="delete-post" data-entry-id="{{ entry.id }}"><i class="fa fa-trash-can"></i></a></td> <!-- Удалить -->
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+
+  <div class="dashboard-section comments-list">
+      <h3>Новые комментарии</h3>
       <ul>
         {% for comment in comments %}
         <li><a href="{% url 'app:post-detail' comment.entry.slug_headline %}#comment-id-{{ comment.id }}">{{ comment.text }}</a></li>
           {% endfor %}
       </ul>
     </div>
-  </div>
+</div>
 </div>
 
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const selectElement = document.getElementById("id_select");
-        const pubDateElement = document.querySelector('.form-group[data-pub-date]');
-        const publishNowButton = document.querySelector('.button-group button:nth-child(1)');
-        const publishLaterButton = document.querySelector('.button-group button:nth-child(2)');
-
-        selectElement.addEventListener('change', function() {
-            const selectedValue = this.value;
-
-            if (selectedValue === '1') {  // Опубликовать сейчас
-                pubDateElement.style.display = 'none';
-                publishNowButton.style.display = 'block';
-                publishLaterButton.style.display = 'none';
-            } else if (selectedValue === '2') {  // Опубликовать позже
-                pubDateElement.style.display = 'block';
-                publishNowButton.style.display = 'none';
-                publishLaterButton.style.display = 'block';
-            }
-        });
-    });
-</script>
-
-<script>
-    // Отправка POST, PUT метода
-    document.addEventListener("DOMContentLoaded", function () {
-        //const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-        let form = document.getElementById('post-form')
-
-        form.addEventListener('submit', function (event) {
-            event.preventDefault();
-            // Создайте новый объект FormData внутри функции обработчика
-            let formData = new FormData(form);
-            console.log(formData);
-
-            let csrfToken = formData.get('csrfmiddlewaretoken');
-
-            let requestOptions = {
-                method: form.dataset.method.toUpperCase(),  // Преобразовываем в верхний регистр
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                },
-                body: formData,
-            };
-
-            // Добавьте 'Content-Type' в headers, если это PUT-запрос
-            if (form.dataset.method.toUpperCase() === 'PUT') {
-                requestOptions.headers['Content-Type'] = 'multipart/form-data';
-            };
-
-            fetch(form.action, requestOptions)
-                .then(response => response.json())
-                .then(data => console.log('Success:', data))
-                .catch(error => console.error('Error:', error));
-        });
-    });
-</script>
-
-
-<script>
-    // Действия при нажатии на кнопку "Новый пост"
-document.addEventListener("DOMContentLoaded", function() {
-  const createPostButton = document.getElementById("create-post-button");
-  const createPostForm = document.getElementById("post-form");
-  const previewImage = document.getElementById("preview_image");
-  const pubDateElement = document.querySelector('.form-group[data-pub-date]');
-  const publishNowButton = document.querySelector('.button-group button:nth-child(1)');
-  const publishLaterButton = document.querySelector('.button-group button:nth-child(2)');
-
-  createPostButton.addEventListener("click", function() {
-      // Сбросьте значения всех полей формы
-      createPostForm.reset();
-      previewImage.src = ""; // Установите путь изображения
-      previewImage.style.display = "none"; // Скрыть элемент img
-      pubDateElement.style.display = 'none';
-      publishNowButton.style.display = 'block';
-      publishLaterButton.style.display = 'none';
-      createPostForm.dataset.method = 'post';
-      createPostForm.action = `/entry/`;
-
-
-    //if (createPostForm.style.display === "none" || createPostForm.style.display === "") {
-    //  createPostForm.style.display = "block";
-    //} else {
-    //  createPostForm.style.display = "none";
-    //}
-  });
-});
-</script>
-
-{#<script>#}
-{#    // Отображение превью картинки#}
-{#    document.addEventListener("DOMContentLoaded", function() {#}
-{#        const imageInput = document.getElementById("id_image");#}
-{#        const imagePreview = document.getElementById("preview_image");#}
-{##}
-{#        // Добавьте обработчик события для изменения значения input#}
-{#        imageInput.addEventListener("change", function() {#}
-{#            // Отображение превью изображения#}
-{#            displayImagePreview(this);#}
-{#        });#}
-{##}
-{#        function displayImagePreview(input) {#}
-{#            if (input.files && input.files[0]) {#}
-{#                const reader = new FileReader();#}
-{##}
-{#                reader.onload = function(e) {#}
-{#                    // Устанавливаем атрибут src для элемента img#}
-{#                    imagePreview.src = e.target.result;#}
-{#                    // Отображаем элемент img#}
-{#                    imagePreview.style.display = "block";#}
-{#                };#}
-{##}
-{#                // Читаем файл в формате base64#}
-{#                reader.readAsDataURL(input.files[0]);#}
-{#            }#}
-{#        }#}
-{#    });#}
-{#</script>#}
-
-
-
-<script>
-    // Получение данных поста
-document.addEventListener("DOMContentLoaded", function() {
-    const postForm = document.getElementById('post-form');
-    const editPostLinks = document.querySelectorAll('.edit-post');
-
-    editPostLinks.forEach(function(link) {
-        link.addEventListener('click', function(event) {
-            event.preventDefault();
-            const entryId = this.getAttribute('data-entry-id');
-            fetch(`/entry/${entryId}`)
-                .then(response => response.json())
-                .then(data => fillUpdateForm(data))
-                .catch(error => console.error('Error:', error));
-        });
-    });
-
-    function fillUpdateForm(data) {
-        const blogSelect = document.getElementById('id_blog');
-
-        // Ищем опцию с нужным текстом
-        let desiredOption = Array.from(blogSelect.options).find(option => option.text === data.blog_name);
-
-        // Устанавливаем найденный <option> как выбранный
-        if (desiredOption) {
-            desiredOption.selected = true;
-        }
-
-        document.querySelector('#post-form #id_headline').value = data.headline;
-        document.querySelector('#post-form #id_summary').value = data.summary;
-        tinymce.get('id_content').setContent(data.body_text);
-
-        document.getElementById('id_image').value = '';
-        const previewImage = document.getElementById("preview_image");
-
-        // Если есть путь к изображению в JSON, отобразите его в элементе img
-        if (data.image) {
-            previewImage.src = data.image; // Установите путь изображения
-            previewImage.style.display = "block"; // Покажите элемент img
-        }
-
-        // Получение элемента select
-        const selectAuthor = document.getElementById('id_authors');
-        // Перебираем авторов в JSON
-        data.authors.forEach(author => {
-            // Ищем опцию с нужным именем автора
-            let desiredOption = Array.from(selectAuthor.options).find(option => option.text === author.name);
-
-            // Если найдено совпадение, устанавливаем эту опцию выбранной
-            if (desiredOption) {
-                desiredOption.selected = true;
-            }
-        });
-
-        // Получение элемента select
-        const selectTag = document.getElementById('id_tags');
-        data.tags.forEach(tag => {
-            let desiredOption = Array.from(selectTag.options).find(option => option.text === tag.name);
-
-            // Если найдено совпадение, устанавливаем эту опцию выбранной
-            if (desiredOption) {
-                desiredOption.selected = true;
-            }
-        });
-
-        postForm.action = `/entry/${data.entry_id}/`;
-        postForm.dataset.method = "put";
-
-    };
-});
-</script>
-
-<script>
-    // обработчик удаления поста
-document.addEventListener("DOMContentLoaded", function() {
-    const deletePostLinks = document.querySelectorAll('.delete-post');
-    const confirmationModal = document.getElementById('confirmationModal');
-    const confirmDeleteButton = document.getElementById('confirmDelete');
-    const cancelDeleteButton = document.getElementById('cancelDelete');
-
-    let currentEntryId; // Хранит id текущего поста
-
-    // Добавляем обработчики событий для каждой ссылки на удаление
-    deletePostLinks.forEach(function(link) {
-        link.addEventListener('click', function(event) {
-            event.preventDefault();
-            currentEntryId = this.getAttribute('data-entry-id');
-            confirmationModal.style.display = 'flex'; // Показываем модальное окно
-        });
-    });
-
-    const csrftoken = getCookie('csrftoken');
-
-        // Функция для получения значения куки по имени
-    function getCookie(name) {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-    }
-
-    // Обработчик события для кнопки подтверждения удаления
-    confirmDeleteButton.addEventListener('click', function() {
-        // Отправка запроса на удаление
-        console.log("Удаление", currentEntryId)
-    fetch(`/entry/${currentEntryId}`, {
-    method: 'DELETE',
-    headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrftoken
-    }
-    }).then(response => {
-        if (response.ok) {
-            // Если удаление прошло успешно, закрываем модальное окно
-            confirmationModal.style.display = 'none';
-            // Удаление строки с постом из интерфейса
-            const postToDelete = document.querySelector(`li[data-entry-id="${currentEntryId}"]`);
-            if (postToDelete) {
-                postToDelete.remove();
-            } else {
-                console.error('Error: Элемент поста не найден.');
-            }
-        } else {
-            console.error('Error:', response.statusText);
-        }
-    })
-    .catch(error => console.error('Error:', error));
-    });
-
-    // Обработчик события для кнопки отмены удаления
-    cancelDeleteButton.addEventListener('click', function() {
-        // Закрываем модальное окно
-        confirmationModal.style.display = 'none';
-    });
-});
-</script>
-
-
-
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    // Получаем элементы
-    var authorSelect = document.getElementById("id_authors");
-    var authorSearchInput = document.getElementById("authorSearch");
-
-    // Копируем все опции для последующей фильтрации
-    var allOptions = Array.from(authorSelect.options);
-
-    // Сохраняем исходные выбранные опции
-    var selectedOptions = Array.from(authorSelect.selectedOptions);
-
-    // Обработчик события ввода в поле поиска
-    authorSearchInput.addEventListener("input", function() {
-        var searchTerm = authorSearchInput.value.toLowerCase();
-
-        // Фильтруем опции в соответствии с введенным текстом
-        var filteredOptions = allOptions.filter(function(option) {
-            return option.text.toLowerCase().includes(searchTerm);
-        });
-
-        // Очищаем список
-        authorSelect.innerHTML = '';
-
-        // Добавляем отфильтрованные опции обратно в список
-        filteredOptions.forEach(function(option) {
-            authorSelect.appendChild(option.cloneNode(true));
-        });
-
-        // Восстанавливаем ранее выбранные опции
-        selectedOptions.forEach(function(selectedOption) {
-            var restoredOption = authorSelect.querySelector('option[value="' + selectedOption.value + '"]');
-            if (restoredOption) {
-                restoredOption.selected = true;
-            }
-        });
-    });
-});
-</script>
-
+<script src="{% static 'app/personal.js' %}"></script>
 
 </body>
 </html>
