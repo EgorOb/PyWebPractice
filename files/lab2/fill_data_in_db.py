@@ -32,7 +32,7 @@ setup()  # Загрузка настроек Django
 # ______________________________________________________________________________
 
 from django.contrib.auth.models import User  # Загрузка базового пользователя
-from app.models import Blog, UserProfile, AuthorProfile, Entry, Tag, Comment
+from apps.app.models import Blog, UserProfile, AuthorProfile, Entry, Tag, Comment
 
 # _____________Чтение данных из json для добавления в БД________________________
 with open("data/json_data/blogs.json", encoding="utf-8") as f:
@@ -56,14 +56,15 @@ if __name__ == "__main__":
     print("Админ создан \n    Логин: admin\n    Пароль: 123")
 
     # Работает долго, хеширование пароля занимает много времени
-    create_fake_users(40, True)  # Создание аккаунта для персонала
+    create_fake_users(5, True)  # Создание аккаунта для персонала
+
+    create_fake_users(35, False)  # Создание аккаунта для персонала
 
     print()  # Просто, чтобы сделать отступ в консоли
 
     # ______Работа с разрешениями_____________________________________
 
     from django.contrib.auth.models import Group, Permission
-    from app.models import Entry
 
     # Получаем группу "Авторы"
     authors_group, created = Group.objects.get_or_create(name='Авторы')

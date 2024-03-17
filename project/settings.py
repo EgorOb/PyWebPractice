@@ -38,16 +38,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'app',
+    'apps.app',
+    'apps.db_train',
+    'apps.api',
     'tinymce',
     'crispy_forms',
     "crispy_bootstrap4",
 ]
 
-# для Django Debug Toolbar
-INTERNAL_IPS = [
-    "127.0.0.1",
-]
 
 # Настройки TinyMCE
 TINYMCE_DEFAULT_CONFIG = {

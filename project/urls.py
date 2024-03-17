@@ -20,7 +20,8 @@ from django.conf.urls.static import static  # Чтобы подгрузить о
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('app.urls')),
+    path('', include('apps.app.urls')),
+    path('train/', include('apps.db_train.urls')),
     path('tinymce/', include('tinymce.urls')),
 ]
 

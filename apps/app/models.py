@@ -212,7 +212,7 @@ class Entry(models.Model):
                                     blank=True,
                                     verbose_name="дата публикации")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES,
-                              default=PUBLISHED)
+                              default=PUBLISHED, blank=True)
     mod_date = models.DateField(auto_now=True)
     authors = models.ManyToManyField(AuthorProfile,
                                      related_name="entrys",
@@ -221,9 +221,9 @@ class Entry(models.Model):
                                      автора и соавторов, если они есть.
                                      Зажмите Ctrl, чтобы выделить несколько 
                                      авторов""")
-    number_of_comments = models.IntegerField(default=0)
-    number_of_pingbacks = models.IntegerField(default=0)
-    rating = models.FloatField(default=0.0)
+    number_of_comments = models.IntegerField(default=0, blank=True)
+    number_of_pingbacks = models.IntegerField(default=0, blank=True)
+    rating = models.FloatField(default=0.0, blank=True)
     tags = models.ManyToManyField('Tag', verbose_name="теги статьи")
 
     def save(self, *args, **kwargs):
