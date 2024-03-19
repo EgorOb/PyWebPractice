@@ -532,7 +532,10 @@ admin.site.register(Author)
 
 ```python
 def __str__(self):
-    return f"{self.username} - {self.last_name} {self.first_name.upper()[0]}.{self.middle_name.upper()[0]}."
+    initials = None  # Инициалы
+    if self.first_name and self.middle_name:
+        initials = f"{self.first_name.upper()[0]}.{self.middle_name.upper()[0]}."
+    return f"{self.username} - {self.last_name} {initials}"
 ```
 
 Теперь автор более читаемый и понятно кто это
@@ -709,7 +712,10 @@ class Author(models.Model):
     update_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.username} - {self.last_name} {self.first_name.upper()[0]}.{self.middle_name.upper()[0]}."
+        initials = None  # Инициалы
+        if self.first_name and self.middle_name:
+            initials = f"{self.first_name.upper()[0]}.{self.middle_name.upper()[0]}."
+        return f"{self.username} - {self.last_name} {initials}"
 ```
 
 А в панели администратора это выглядит следующим образом
@@ -769,12 +775,179 @@ python manage.py migrate
 
 ![img_37.png](img_37.png)
 
+И отображение таблицы стало таким, какое прописывали
 
-### 3.5 Заполенение данных в БД
+![img_39.png](img_39.png)
+
+На текущий момент вроде бы всё, но упущен один интересный момент, а именно день рождения есть, а сколько лет мы не передаём, 
+хотя такое поле есть в таблице. В таких случаях вычисление происходит непосредственно перед сохранением в БД. Для это
+перегружают метод `save` в классе, где приписывают какие действия необходимо совершить при сохранении в БД.
+
+Добавьте данный код в класс `Author`
+
+```python
+class Author(models.Model):
+    # ...    
+    def save(self, *args, **kwargs):
+        if self.date_birth:  # Если известен день рождения
+            today = datetime.today()  # Определяем текущие параметры даты
+            # Определяем добавку, был ли уже день рождения в этом году? Если не был, то 1, если был, то 0
+            additional_year = (today.month, today.day) < (self.date_birth.month, self.date_birth.day)
+            self.age = today.year - self.date_birth.year - additional_year  # Перезаписываем значение
+        super().save(*args, **kwargs)
+```
+
+Попробуйте теперь сделать обновление миграций и перенос этих данных в БД.
+
+```python
+python manage.py makemigrations
+```
+
+```python
+python manage.py migrate
+```
+
+Вы увидите, что изменений нет, так как написание дополнительных методов или перегрузка методов не меняет структуру таблицы,
+это просто дополнительный функционал.
+
+![img_38.png](img_38.png)
+
+### 3.5 Заполнение данных в БД
+
+Загрузим данные по авторам из ещё одной фикстуры. Фикстура `data_author.json` лежит в папке `files/lab1`
+
+Выполните команду, чтобы загрузить данные из этого файла
+```python
+python manage.py loaddata files/lab1/data_author.json 
+```
+
+Теперь в вашей БД 11 авторов. Добавим ещё одного вручную через консоль `shell`.
+
+Чтобы открыть консоль введите команду
+
+```python
+python manage.py shell
+```
+
+Появится интерактивная консоль, где можно выполнять команды и тем самым добавить данные в БД. Но перед этим необходимо 
+подгрузить таблицу `Author`. В интерактивной консоли выполните
+
+```python
+from apps.db_train.models import Author
+```
+
+Весь код приведенный ниже выполняется в интерактивной оболочке 
+
+Создадим авторов 2-умя способами с использованием `save` и через `create`
+
+Для записи данных с использованием save необходимо создать экземпляр, а затем его сохранить. Главное, что значения 
+передаются в любой класс таблицы только как `именованные переменные`.
+
+В интерактивной консоли выполните
+
+```python
+obj = Author(username='my_author', email='author@author.ru', gender='м', status_rule=True) 
+obj.save() 
+```
+
+![img_40.png](img_40.png)
+
+Затем создаём автора через `create`. Для это используется `Author.objects.create`
+
+Чтобы передать дату, необходимо использовать объект `datetime`
+
+Выполните в интерактивной консоли следующий код
+
+```python
+from datetime import date
+Author.objects.create(username='my_author1', email='author1@author.ru', gender='ж', status_rule=False, date_birth=date(1990, 12,12))
+```
+
+![img_41.png](img_41.png)
+
+Теперь были созданы 2 автора разными способами.
+
+### 3.6 Получение, изменение, удаление данных из БД
+
+#### Получение
+
+Чтобы получить все элементы, используют конструкцию `objects.all()` в своей таблице.
+
+В нашем случае это
+
+```python
+Author.objects.all()
+```
+
+![img_42.png](img_42.png)
+
+Чтобы получить одну строку в БД, то применяется конструкция `objects.get(поле=значение)` в своей таблице. Где поле - название поля по которому ищем,
+значение - искомое значение у поля. Если объект не найден, то вызовется ошибка.
+
+Как пример необходимо получить строку, где у автора имя `Админ`
+```python
+Author.objects.get(first_name='Админ')
+```
+![img_43.png](img_43.png)
 
 
+Чтобы получить несколько значений применяют фильтрацию с использованием конструкции `objects.filter(поле=значение)`.
+
+Как пример необходимо получить строки, где пол автора женский, а другим запросом, где мужской
+
+```python
+Author.objects.filter(gender='ж')
+Author.objects.filter(gender='м')
+```
+
+![img_44.png](img_44.png)
+
+#### Обновление
+
+Чтобы обновить данные необходимо сначала получить объект из БД, затем обновить его атрибуты и снова его сохранить через `save`.
+
+Пример: получим автора с id=2 и изменим ему название города
+
+```python
+author = Author.objects.get(id=2)
+>>> author.city = 'Санкт-Петербург'
+>>> author.save() 
+```
+
+Если есть необходимость, то возможно изменить данные во множестве запросов (queryset), при помощи `update` таким образов в
+каждый объект, что есть в queryset в указанное поле(поля) запишутся значения.
+
+Пример: Заменить статус ознакомления `status_rule` на `True` тех авторов, чей город `Москва`
+
+```python
+Author.objects.filter(city='Москва').update(status_rule=True)
+```
+
+![img_45.png](img_45.png)
+
+#### Удаление
+
+Чтобы удалить данные необходимо сначала получить объект из БД, затем удалить его через метод `delete()`.
+
+Пример: Удалить автора с email `author1@author.ru`
+
+```python
+author = Author.objects.get(email='author1@author.ru')
+author.delete()
+```
+
+![img_46.png](img_46.png)
 
 
-## 4. Написание запросов в БД используя ORM Django
+Если требуется удалить несколько элементов и есть множество запросов (queryset), то можно их удалить через это queryset.
 
+Пример: требуется удалить всех авторов, кто не указал город
 
+```python
+Author.objects.filter(city=None).delete()
+Author.objects.count()  # 7 - Количество оставшихся записей
+```
+
+![img_47.png](img_47.png)
+
+# Практика закончена

@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
-
+from datetime import datetime
 # Create your models here.
 
 
@@ -104,8 +104,19 @@ class Author(models.Model):
     update_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.username} - {self.last_name} {self.first_name.upper()[0]}.{self.middle_name.upper()[0]}."
+        initials = None  # Инициалы
+        if self.first_name and self.middle_name:
+            initials = f"{self.first_name.upper()[0]}.{self.middle_name.upper()[0]}."
+        return f"{self.username} - {self.last_name} {initials}"
 
     class Meta:
         verbose_name = "Автор"
         verbose_name_plural = "Авторы"
+
+    def save(self, *args, **kwargs):
+        if self.date_birth:
+            today = datetime.today()  # Определяем текущие параметры
+            # Определяем добавку, был ли уже день рождения в этом году? Если не был, то 1, если был, то 0
+            additional_year = (today.month, today.day) < (self.date_birth.month, self.date_birth.day)
+            self.age = today.year - self.date_birth.year - additional_year  # Перезаписываем значение
+        super().save(*args, **kwargs)
