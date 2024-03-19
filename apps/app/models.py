@@ -196,6 +196,7 @@ class Entry(models.Model):
                                 verbose_name="заголовок статьи")
     slug_headline = models.SlugField(null=True,
                                      blank=True,
+                                     editable=False,
                                      max_length=255,
                                      verbose_name="slug заголовок",
                                      help_text="""Если не указать, 
