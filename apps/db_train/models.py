@@ -1,7 +1,38 @@
 from django.db import models
 from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
-from datetime import datetime
 # Create your models here.
+from datetime import datetime
+
+
+class AuthorProfile(models.Model):
+    author = models.OneToOneField('Author', on_delete=models.CASCADE)
+    stage = models.IntegerField(default=0,
+                                blank=True,
+                                verbose_name="Стаж",
+                                help_text="Стаж в годах")
+
+    def __str__(self):
+        return f"Автор: {self.author.username}; Стаж: {self.stage} лет"
+
+
+
+class Entry(models.Model):
+    text = models.TextField(verbose_name="Текст статьи",
+                            )
+    author = models.ForeignKey("Author", on_delete=models.CASCADE, related_name='entries')
+    tags = models.ManyToManyField("Tag", related_name='entries')
+
+    def __str__(self):
+        return f"Автор: {self.author.username}; Текст: {self.text[:20]}"
+
+
+class Tag(models.Model):
+    name = models.CharField(max_length=50,
+                            verbose_name="Название",
+                            )
+
+    def __str__(self):
+        return self.name
 
 
 class Author(models.Model):
@@ -11,14 +42,12 @@ class Author(models.Model):
     )
 
     username = models.SlugField(verbose_name='Имя аккаунта',
-                                help_text="Введите username, не длиннее 50 символов. Использовать нужно английский алфавит, разделять фразы нужно символом '-'",
                                 unique=True,
-                                )
+                                help_text="Введите username, не длиннее 50 символов. Использовать нужно английский алфавит, разделять фразы нужно символом '-'")
 
     email = models.EmailField(verbose_name='Адрес электронной почты',
-                              help_text="Адрес почты в формате *@*.*",
                               unique=True,
-                              )
+                              help_text="Адрес почты в формате *@*.*")
 
     first_name = models.CharField(max_length=100,
                                   verbose_name='Имя',
@@ -114,9 +143,11 @@ class Author(models.Model):
         verbose_name_plural = "Авторы"
 
     def save(self, *args, **kwargs):
-        if self.date_birth:
-            today = datetime.today()  # Определяем текущие параметры
+        if self.date_birth:  # Если известен день рождения
+            today = datetime.today()  # Определяем текущие параметры даты
             # Определяем добавку, был ли уже день рождения в этом году? Если не был, то 1, если был, то 0
             additional_year = (today.month, today.day) < (self.date_birth.month, self.date_birth.day)
             self.age = today.year - self.date_birth.year - additional_year  # Перезаписываем значение
         super().save(*args, **kwargs)
+
+
