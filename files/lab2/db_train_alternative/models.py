@@ -60,7 +60,7 @@ class AuthorProfile(models.Model):
 
     phone_regex = RegexValidator(
         regex=r'^\+79\d{9}$',
-        message="Phone number must be entered in the format: '+79123456789'."
+        message="Телефонный номер должен быть следующего формата: '+79123456789'."
     )
     phone_number = models.CharField(validators=[phone_regex],
                                     max_length=12,
@@ -89,23 +89,37 @@ class Entry(models.Model):
     body_text - текст статьи
     pub_date - дата и время публикации записи
     mod_date - дата редактирования записи
-    authors - авторы написавшие данную статью (отношение "многие ко многим"
-        (many-to-many). Один автор может сделать несколько записей в блог (Entry),
-         и одну запись могут сделать несколько авторов (Author))
+    author - автор написавший данную статью (отношение "один ко многим")
     number_of_comments - число комментариев к статье
     number_of_pingbacks -  число отзывов/комментариев на других блогах или сайтах,
         связанных с определенной записью блога (Entry)
     rating - оценка статьи
+    tags - теги статьи (отношение многие-ко-многим)
+
     """
-    blog = models.ForeignKey(Blog, on_delete=models.CASCADE)
+    blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name='entries')
     headline = models.CharField(max_length=255)
     body_text = models.TextField()
     pub_date = models.DateTimeField(default=datetime.now)
     mod_date = models.DateField(auto_now=True)
-    authors = models.ManyToManyField(Author)
+    author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name='entries')
     number_of_comments = models.IntegerField(default=0)
     number_of_pingbacks = models.IntegerField(default=0)
     rating = models.FloatField(default=0.0)
+    tags = models.ManyToManyField('Tag', related_name='entries')
 
     def __str__(self):
         return self.headline
+
+
+class Tag(models.Model):
+    """
+    Тег для статьи
+    name - название тега
+    slug_name - название в виде slug
+    """
+    name = models.CharField(max_length=50, verbose_name="Название")
+    slug_name = models.SlugField(verbose_name="Slug название")
+
+    def __str__(self):
+        return self.name
