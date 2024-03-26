@@ -118,8 +118,8 @@ class Tag(models.Model):
     name - название тега
     slug_name - название в виде slug
     """
-    name = models.CharField(max_length=50, verbose_name="Название")
-    slug_name = models.SlugField(verbose_name="Slug название")
+    name = models.CharField(max_length=50, verbose_name="Название", unique=True)
+    slug_name = models.SlugField(verbose_name="Slug название", unique=True)
 
     def __str__(self):
         return self.name
