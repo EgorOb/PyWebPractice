@@ -67,7 +67,7 @@
     "model": "db_train.entry",
     "pk": 1,
     "fields": {
-        "text": "Статья админа",
+        "text": "Музыка в кино",
         "author": 1,
         "tags": [
             1,
@@ -79,7 +79,7 @@
     "model": "db_train.entry",
     "pk": 2,
     "fields": {
-        "text": "Статья не админа",
+        "text": "Современное искусство",
         "author": 2,
         "tags": [
             3
@@ -90,7 +90,7 @@
     "model": "db_train.entry",
     "pk": 3,
     "fields": {
-        "text": "Статья user",
+        "text": "Кино - это искусство!",
         "author": 3,
         "tags": [
             1,
@@ -102,7 +102,7 @@
     "model": "db_train.entry",
     "pk": 4,
     "fields": {
-        "text": "Статья админа 2",
+        "text": "Только о кино",
         "author": 1,
         "tags": [
             1
@@ -113,12 +113,73 @@
     "model": "db_train.entry",
     "pk": 5,
     "fields": {
-        "text": "Статья админа 3",
+        "text": "Статья о кино, музыке и искусстве",
         "author": 1,
         "tags": [
             1,
             2,
             3
+        ]
+    }
+},
+{
+    "model": "db_train.entry",
+    "pk": 6,
+    "fields": {
+        "text": "Любимое хобби актеров кино",
+        "author": 5,
+        "tags": [
+            1,
+            6
+        ]
+    }
+},
+{
+    "model": "db_train.entry",
+    "pk": 7,
+    "fields": {
+        "text": "Новости о самом главном",
+        "author": 6,
+        "tags": [
+            4
+        ]
+    }
+},
+{
+    "model": "db_train.entry",
+    "pk": 8,
+    "fields": {
+        "text": "Новости медицины",
+        "author": 2,
+        "tags": [
+            4,
+            5
+        ]
+    }
+},
+{
+    "model": "db_train.entry",
+    "pk": 9,
+    "fields": {
+        "text": "Кто больше?",
+        "author": 3,
+        "tags": [
+            1,
+            2,
+            3,
+            4
+        ]
+    }
+},
+{
+    "model": "db_train.entry",
+    "pk": 10,
+    "fields": {
+        "text": "Вязание свитеров для статуй - хобби или искусство?",
+        "author": 6,
+        "tags": [
+            3,
+            6
         ]
     }
 },
@@ -141,6 +202,27 @@
     "pk": 3,
     "fields": {
         "name": "Искусство"
+    }
+},
+{
+    "model": "db_train.tag",
+    "pk": 4,
+    "fields": {
+        "name": "Новости"
+    }
+},
+{
+    "model": "db_train.tag",
+    "pk": 5,
+    "fields": {
+        "name": "Медицина"
+    }
+},
+{
+    "model": "db_train.tag",
+    "pk": 6,
+    "fields": {
+        "name": "Хобби"
     }
 },
 {
