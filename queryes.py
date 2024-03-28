@@ -14,11 +14,29 @@ if __name__ == "__main__":
 
     from django.db.models import Subquery
 
-    # Получаем список ID авторов без биографии
-    subquery = AuthorProfile.objects.filter(bio__isnull=True).values('author_id')
-
-    # Фильтруем записи блога по авторам
-    print(Entry.objects.filter(author__authorprofile__bio__isnull=True))
+    filtered_data = Blog.objects.filter(id__gte=2).order_by("id")
+    print(filtered_data)  # упорядочивание по возрастанию по полю id
+    """
+    <QuerySet [
+    <Blog: Кулинарные искушения>, 
+    <Blog: Фитнес и здоровый образ жизни>, 
+    <Blog: ИТ-новости и технологии>, 
+    <Blog: Мода и стиль>
+    ]>
+    """
+    print(filtered_data.reverse())  # поменяли направление
+    """
+    <QuerySet [
+    <Blog: Мода и стиль>, 
+    <Blog: ИТ-новости и технологии>, 
+    <Blog: Фитнес и здоровый образ жизни>, 
+    <Blog: Кулинарные искушения>
+    ]>
+    """
+    filtered_data = Blog.objects.filter(
+        id__gte=2)  # Если порядок не указан или в модели, или через order_by, то reverse работать не будет
+    print(filtered_data)
+    print(filtered_data.reverse())
 
 
 
