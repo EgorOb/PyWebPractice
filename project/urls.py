@@ -23,6 +23,7 @@ urlpatterns = [
     path('', include('apps.app.urls')),
     path('train/', include('apps.db_train.urls')),
     path('tinymce/', include('tinymce.urls')),
+    path('api_alter/', include('apps.db_train_alternative.urls')),
 ]
 
 if settings.DEBUG:
