@@ -1,7 +1,7 @@
 # 1. Работа с API, через view
 
 Перед тем как работать с `Django Rest Framework` сначала посмотрим как бы можно было сделать
-решение задачи доступа к ресурсам через методы `GET`, `POST`, `PUT`, `DELETE`, без него.
+решение задачи доступа к ресурсам через методы `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, без него.
 
 В приложении `db_train_alternative` во `views.py` пропишем пару отображений для работы с данными.
 
@@ -69,6 +69,14 @@ from .views import AuthorREST
 urlpatterns = [
     path('author/', AuthorREST.as_view()),
     path('author/<int:id>/', AuthorREST.as_view()),
+]
+```
+Затем добавляем ссылку на приложение в `urls.py` в папке `project`
+
+```python
+urlpatterns = [
+    # ...
+    path('api_alter/', include('apps.db_train_alternative.urls')),
 ]
 ```
 
