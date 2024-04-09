@@ -23,3 +23,7 @@ class AuthorSerializer(serializers.Serializer):
         return instance
 
 
+class AuthorModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Author
+        fields = ['id', 'name', 'email']  # или можно прописать '__all__'
