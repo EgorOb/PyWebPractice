@@ -195,96 +195,319 @@ class AuthorGenericAPIView(GenericAPIView, ListModelMixin, CreateModelMixin):
 
 Теперь уже с полным понимаем мы готовы создать и использовать представления на `GenericApiView`
 
-Относительно классовых атрибутов в `ApiView` (`renderer_classes`, `parser_classes`, `authentication_classes`, `throttle_classes`, `permission_classes`, `content_negotiation_class`, `metadata_class`, `versioning_class`),
-то в `GenericApiView` добавились:
-
-* `queryset` (по умолчанию None) - Определяет набор объектов модели, с которыми работает представление.  
-Устанавливается для автоматического извлечения данных из базы данных.
-
-
-* `serializer_class` (по умолчанию None) - Определяет класс сериализатора, который используется для сериализации и десериализации данных.
-Обычно устанавливается в соответствующий сериализатор для модели, с которой работает представление.
-
-
-* `lookup_field` (по умолчанию 'pk') - Определяет поле модели, используемое для поиска объекта по его идентификатору (обычно `id` или `pk`).
-Может быть изменен на имя другого поля модели.
-
-
-* `lookup_url_kwarg` (по умолчанию None) - Определяет имя URL-параметра, используемого для передачи значения идентификатора объекта в представление.
-По умолчанию равен значению атрибута `lookup_field`.
-
-
-* `filter_backends` (по умолчанию api_settings.DEFAULT_FILTER_BACKENDS) - Определяет список классов фильтров, которые будут применены к запросу перед выполнением запроса к базе данных.
-Может быть установлен для применения дополнительных фильтров к набору объектов.
-
-
-* `pagination_class` (по умолчанию api_settings.DEFAULT_PAGINATION_CLASS) - Определяет класс пагинации, который будет использоваться для разбиения результатов на страницы.
-Может быть установлен для добавления пагинации к списку результатов.
-
-
-Для полноценного использования представления на базе `GenericApiView` обычно определяют классовые атрибуты `queryset` с общим запросом в таблицу и 
-`serializer_class` с классом сериализатора, чтобы не проводить сериализацию и десериализацию самостоятельно.
-
-Во `views.py` приложения `api` пропишите класс `AuthorGenericAPIView`:
+Во `views.py` приложения `api` создайте `AuthorGenericAPIView`
 
 ```python
+from django.http import Http404
+from rest_framework.generics import GenericAPIView
+from rest_framework.mixins import RetrieveModelMixin, ListModelMixin, CreateModelMixin, UpdateModelMixin, DestroyModelMixin
+from .serializers import AuthorModelSerializer
 
+
+class AuthorGenericAPIView(GenericAPIView, RetrieveModelMixin, ListModelMixin, CreateModelMixin, UpdateModelMixin,
+                           DestroyModelMixin):
+    queryset = Author.objects.all()
+    serializer_class = AuthorModelSerializer
+
+    def get(self, request, *args, **kwargs):
+        if kwargs.get(self.lookup_field):  # если был передан id или pk
+            # возвращаем один объект
+            return self.retrieve(request, *args, **kwargs)
+        # Иначе возвращаем список объектов
+        return self.list(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def patch(self, request, *args, **kwargs):
+        return self.partial_update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
 ```
 
+Так образом мы записали аналогичные действия как в `AuthorAPIView`, но с `GenericAPIView` и миксинами.
+
+В методе `get` было использовано `if kwargs.get(self.lookup_field)` чтобы проверить, что был передан соответствующий ключ
+pk, чтобы понять хотим мы всё получить или только какого-то конкретного автора.
+
+Осталось только создать новый маршрут, чтобы использовать данное представление
+
+в `urls.py` приложения `api` допишите маршруты
+
+```python
+from .views import AuthorGenericAPIView
+
+urlpatterns = [
+    # ...
+    path('authors_generic/', AuthorGenericAPIView.as_view(), name='author-generic-list'),
+    path('authors_generic/<int:pk>/', AuthorGenericAPIView.as_view(), name='author-generic-detail'),
+]
+```
+
+Проверьте работоспособность маршрутов 
+
+http://127.0.0.1:8000/api/authors_generic/
+
+http://127.0.0.1:8000/api/authors_generic/1/
+
+http://127.0.0.1:8000/api/authors_generic/30/
+
+На последнем запросе возникает ошибка, так как автора не существует, о чем свидетельствует сообщение
+
+![img_16.png](img_16.png)
+
+Допустим нам не нравится сообщение или по какому ключу оно отправлено, тогда его можно изменить отловив эту ошибку и отправив свой текст
+
+```python
+from django.http import Http404
 
 
+class AuthorGenericAPIView(GenericAPIView, RetrieveModelMixin, ListModelMixin, CreateModelMixin, UpdateModelMixin,
+                           DestroyModelMixin):
+    # ...
 
+    def get(self, request, *args, **kwargs):
+        if kwargs.get(self.lookup_field):
+            try:
+                # возвращаем один объект
+                return self.retrieve(request, *args, **kwargs)
+            except Http404:
+                return Response({'message': 'Автор не найден'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            # Иначе возвращаем список объектов
+            return self.list(request, *args, **kwargs)
+    
+    # ...
+```
+
+Теперь если нет автора, то сообщение то, что и хотели
+
+![img_17.png](img_17.png)
+
+Далее проверим работоспособность POST метода через DRF панель.
+
+Если пролистать вниз, то можно обнаружить, что теперь появилась форма для отправки запросов, а не просто сырой json
+
+![img_18.png](img_18.png)
+
+При отправке создастся новый автор
+
+Остальные методы `PUT`, `PATCH`, `DELETE` проверьте самостоятельно через DRF панель
 
 # 2. Использование ViewSet
 
+Поднимаемся на уровень абстрации повыше и там нас встречает `ViewSet`
 
+`ViewSet` в Django REST Framework - это удобный способ организации логики представлений API для работы с моделями. 
+Он представляет собой класс, который объединяет несколько типов представлений 
+(например, просмотр списка объектов, создание нового объекта, получение конкретного объекта, обновление объекта и удаление объекта) в один. 
+Это позволяет упростить код и уменьшить его дублирование.
 
+`ViewSet` может работать как с обычными представлениями, так и с обобщенными представлениями 
+(например, `ListModelMixin`, `CreateModelMixin`, `RetrieveModelMixin`, `UpdateModelMixin`, `DestroyModelMixin`). 
+Он предоставляет стандартные методы для каждой операции CRUD (`Create`, `Retrieve`, `Update`, `Delete`), которые могут 
+быть переопределены по мере необходимости.
 
-# 3. Использование ModelViewSet
+Для использования `ViewSet` в Django REST Framework нужно сначала создать класс, наследующийся от одного из базовых классов 
+`ViewSet` (`ViewSet`, `GenericViewSet`, `ReadOnlyModelViewSet`, `ModelViewSet`) 
+и определить логику для каждой операции, если это необходимо. Затем этот класс регистрируется с помощью маршрутизатора 
+(например, `DefaultRouter` или `SimpleRouter`), чтобы он мог быть доступен по определенным URL.
 
-# 4. Пагинация
+## 2.1 Создание представления
 
-# 5. Фильтрация
+### 2.1.1 ViewSet
 
+Класс `ViewSet` это расширение `APIView` вместе со специальным миксин классом `ViewSetMixin`, который позволяет задавать 
+дополнительные действия
 
-# 6. Тестирование
+![img_19.png](img_19.png)
 
-
-
-# Практика окончена
-
----
-
-# <a name="section-optional-block"></a> <u>Необязательный блок</u> (выполнение по желанию, на результат следующих практик влиять не будет)
-
-## 6. Документирование API
-
-## 6. Использование github для концепции continuous integration (ci)
-
-
-
-Но в DRF есть класс `DefaultRouter` из `rest_framework.routers` который прописывает пути по шаблону самостоятельно, им и воспользуемся.
-
-В `urls.py` приложения `api` пропишите:
+Ниже приведен код просто для ознакомления, чтобы посмотреть как бы выглядел код представления с использованием `ViewSet`
 
 ```python
+from rest_framework import viewsets
+from rest_framework.response import Response
+from .models import Author
+from .serializers import AuthorSerializer
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+
+
+class AuthorViewSet(viewsets.ViewSet):
+    def list(self, request):
+        queryset = Author.objects.all()
+        serializer = AuthorSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request, pk=None):
+        queryset = Author.objects.all()
+        author = get_object_or_404(queryset, pk=pk)
+        serializer = AuthorSerializer(author)
+        return Response(serializer.data)
+
+    def create(self, request):
+        serializer = AuthorSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, pk=None):
+        author = Author.objects.get(pk=pk)
+        serializer = AuthorSerializer(author, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def partial_update(self, request, pk=None):
+        author = Author.objects.get(pk=pk)
+        serializer = AuthorSerializer(author, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def destroy(self, request, pk=None):
+        author = Author.objects.get(pk=pk)
+        author.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+```
+Как видите, в отличие от `APIView`, где мы прописывали методы `get`, `post`, `put`, `patch`, `delete`, то в `ViewSet`
+прописываем `list`, `retrieve`, `create`, `update`, `partial_update`, `destroy`. Всё встанет на свои места, 
+когда мы будем проводить маршрутизацию.
+
+Кода много, но полезно когда хотите держать всё под контролем. Этот подход требует больше кода по сравнению с использованием `ModelViewSet` или `GenericViewSet`, 
+но дает больше контроля над каждым методом представления.
+
+### 2.1.2 GenericViewSet
+
+Класс `GenericViewSet` это расширение `GenericAPIView` вместе со специальным миксин классом `ViewSetMixin`, который позволяет задавать 
+дополнительные действия
+
+![img_20.png](img_20.png)
+
+Приведенный код снова просто для ознакомления, чтобы посмотреть как бы выглядел код представления с использованием `GenericViewSet`. 
+Ранее мы выяснили, что в Generic нужно передавать mixins, иначе всё нужно будет писать руками, поэтому код особо не будет отличаться от
+кода выше, единственное, что в GenericViewSet доступен классовый атрибут `queryset` и `serializer_class`, которого нет в обычном
+`ViewSet`
+
+```python
+from rest_framework import viewsets
+from rest_framework.response import Response
+from .models import Author
+from .serializers import AuthorSerializer
+from rest_framework import status
+
+class AuthorViewSet(viewsets.GenericViewSet):
+    queryset = Author.objects.all()
+    serializer_class = AuthorSerializer
+
+    def list(self, request):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request, pk=None):
+        author = self.get_object()
+        serializer = self.get_serializer(author)
+        return Response(serializer.data)
+
+    def create(self, request):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, pk=None):
+        author = self.get_object()
+        serializer = self.get_serializer(author, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def partial_update(self, request, pk=None):
+        author = self.get_object()
+        serializer = self.get_serializer(author, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def destroy(self, request, pk=None):
+        author = self.get_object()
+        author.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+```
+
+### 2.1.3 ReadOnlyModelViewSet
+
+Расширение `GenericViewSet`, с добавлением методов `list()` и `retrieve()`
+
+![img_21.png](img_21.png)
+
+Класс не зря назван `ReadOnlyModelViewSet` так как в нём содержатся только методы для обработки GET запроса, без возможности
+изменения объектов в БД
+
+### 2.1.4 ModelViewSet
+
+Самый часто употребимый класс из блока ViewSet. Является расширением `GenericViewSet`, но зато каким! Класс расширен всеми доступными миксинами,
+т.е. сразу обладает методами `list`, `retrieve`, `create`, `update`, `partial_update`, `destroy`, которые ***если это не требуется (для вашей логики API или взаимодействия с БД),
+то не нужно переопределять***.
+
+![img_22.png](img_22.png)
+
+Так что код теперь будет таким, его и добавим во `views.py` приложения `api`
+
+```python
+from rest_framework.viewsets import ModelViewSet
+
+class AuthorViewSet(ModelViewSet):
+    queryset = Author.objects.all()
+    serializer_class = AuthorModelSerializer
+```
+
+Коротко и лаконично.
+
+
+## 2.2 Маршрутизация
+
+Осталось только зарегистрировать маршруты у нашего `AuthorViewSet`
+
+Регистрация маршрутов в представлений типа `ViewSet` (`ViewSet`, `GenericViewSet`, `ReadOnlyModelViewSet`, `ModelViewSet`) 
+отличается от ранее используемых. Для этого используется специальный класс `DefaultRouter` или `SimpleRouter` в который передаётся ViewSet и название маршрута, затем
+уже данный роутер регистрируется более привычным способом.
+
+В `urls.py` приложения `api` пропишем
+
+```python
+from django.urls import include
+from .views import AuthorViewSet
 from rest_framework.routers import DefaultRouter
-from .views import AuthorAPIView
 
-# Создание экземпляра DefaultRouter
 router = DefaultRouter()
+router.register(r'authors_viewset', AuthorViewSet, basename='authors-viewset')
 
-# Регистрация представления AuthorAPIView с именем 'authors'
-router.register(r'authors', AuthorAPIView, basename='author')
+urlpatterns = [
+    # ...
+    path('', include(router.urls)),
+]
 ```
 
 В этом коде:
 
 * Создается экземпляр класса `DefaultRouter`.
-* Представление `AuthorAPIView` регистрируется в роутере под именем `'authors'`.
+* Представление `AuthorViewSet` регистрируется в роутере под именем `'authors_viewset'`.
 
-В роутере маршруты автоматически создадутся для каждого метода представления `AuthorAPIView` (GET, POST, PUT, PATCH, DELETE) 
-и будут доступны по URL `/authors/` для списка авторов и `/authors/<pk>/` для конкретного автора, где <pk> - это первичный ключ автора.
+В роутере маршруты автоматически создадутся для каждого метода представления `AuthorViewSet` (GET, POST, PUT, PATCH, DELETE) 
+и будут доступны по URL `/authors_viewset/` для списка авторов и `/authors_viewset/<pk>/` для конкретного автора, 
+где <pk> - это первичный ключ автора.
 
 В Django REST Framework, когда вы используете `router.register()` для регистрации представления в роутере, 
 параметр `basename` определяет базовое имя для создаваемых URL. Это базовое имя используется при генерации именованных URL в представлениях, связанных с роутером.
@@ -297,18 +520,208 @@ router.register(r'authors', AuthorAPIView, basename='author')
 * `<basename>-detail`, 
 * `<basename>-set`. 
 
-Например, если вы укажете `basename='author'`, то URL для списка объектов будет иметь имя `author-list`, для конкретного объекта - `author-detail`, а для набора - `author-set`.
+Например, если вы укажете `basename='authors-viewset'`, то URL для списка объектов будет иметь имя `authors-viewset-list`, 
+для конкретного объекта - `author-detail`, 
+а для набора - `authors-viewset-set`.
 Эти имена можно использовать в методах reverse() или reverse_lazy() для генерации URL внутри вашего кода.
 
-Последнее, что осталось сделать, это зарегистрировать сам роутер для приложения `api`.
+Общий код во `views.py` выглядит так
 
-Для этого в `urls.py` папки `project` пропишем
+![img_23.png](img_23.png)
+
+Теперь если пройти по маршруту http://127.0.0.1:8000/api/a чтобы посмотреть какие были созданы, то увидим, что router создал несколько
+маршрутов
+
+![img_24.png](img_24.png)
+
+Всё остальное полностью работоспособно по маршрутам
+
+http://127.0.0.1:8000/api/authors_viewset/
+
+http://127.0.0.1:8000/api/authors_viewset/10/
+
+
+## 2.3 Поддерживание дополнительных действий
+
+`ModelViewSet` поддерживает написание пользовательский действий, т.е. методов (которые не вписываются в стандартные операции CRUD), которые будут вызываться при заходе на определенный путь.
+
+Вы можете указать, на каких типах запросов может запускаться пользовательское действие, используя атрибут `action` в методе `@action декоратора`. 
+Этот декоратор предоставляется Django REST Framework для добавления пользовательских действий к вашим представлениям ViewSet.
+По названию вашего метода будет сформирован маршрут с этим названием.
+
+Во `views.py` приложения `api` в `AuthorViewSet` пропишем
 
 ```python
-from apps.api.urls import router
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
-urlpatterns = [
-    # ...
-    path('api/', include(router.urls)), 
-]
+class AuthorViewSet(ModelViewSet):
+    queryset = Author.objects.all()
+    serializer_class = AuthorModelSerializer
+
+    @action(detail=True, methods=['post'])
+    def my_action(self, request, pk=None):
+        # Ваша пользовательская логика здесь
+        return Response({'message': f'Пользовательская функция для пользователя с pk={pk}'})
 ```
+
+`@action(detail=True, methods=['post'])` указывает, что пользовательское действие custom_action доступно только для объектов, 
+а не для всего списка (`detail=True`), и может быть запущено только с HTTP методом POST (`methods=['post']`).
+
+`pk=None` означает, что этот метод принимает параметр идентификатора (pk), который используется для получения объекта из базы данных.
+
+Таким образом, пользовательское действие `my_action` теперь доступно только для HTTP POST запросов и может быть вызвано только для конкретных объектов.
+
+Теперь появились новые маршруты
+
+![img_25.png](img_25.png)
+
+GET Запрос не работает http://127.0.0.1:8000/api/authors_viewset/10/my_action/
+
+А вот POST работает
+
+![img_26.png](img_26.png)
+
+## 2.4 Ограничение поддерживаемых методов для всего представления
+
+По умолчанию `ModelViewSet` поддерживает все методы `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, но это можно ограничить.
+
+Делается это на этапе создания представления в классовом атрибуте `http_method_names`, как пример 
+
+```python
+class AuthorViewSet(viewsets.ModelViewSet):
+    queryset = Author.objects.all()
+    serializer_class = AuthorSerializer
+    http_method_names = ['get', 'post']
+```
+
+В таком случае представление `AuthorViewSet` будет поддерживать только методы `GET` и `POST`
+
+# 3. Пагинация
+
+Пагинация - это процесс разделения большого списка данных на отдельные страницы для улучшения производительности и удобства использования. 
+Веб-приложения часто используют пагинацию для отображения больших объемов данных, таких как результаты поиска или список записей.
+
+`DRF` предоставляет множество встроенных классов пагинации для различных видов пагинации, 
+таких как стандартная пагинация, курсорная пагинация, пагинация на основе номеров страниц и т. д.
+
+Чтобы применить пагинацию в `AuthorViewSet`, вы можете использовать классы пагинации `DRF` и настроить их в соответствии 
+с вашими потребностями. 
+
+Например, вы можете добавить следующий код в ваш `AuthorViewSet`, чтобы применить стандартную пагинацию:
+
+```python
+from rest_framework.pagination import PageNumberPagination
+
+
+class AuthorPagination(PageNumberPagination):
+    page_size = 5  # количество объектов на странице
+    page_size_query_param = 'page_size'  # параметр запроса для настройки количества объектов на странице
+    max_page_size = 1000  # максимальное количество объектов на странице
+
+
+class AuthorViewSet(ModelViewSet):
+    queryset = Author.objects.all()
+    serializer_class = AuthorModelSerializer
+    pagination_class = AuthorPagination
+
+    # Остальные методы
+```
+
+Пагинация применяется для результатов запроса метода `list()`, т.е. в нашем случае для `GET` запроса
+
+Отобразим всех авторов http://127.0.0.1:8000/api/authors_viewset/ теперь их будет всего 5 и будет ещё дополнительная информация.
+
+![img_27.png](img_27.png)
+
+Передадим в запрос параметр `page` со значением страницы, которую хотим отобразить http://127.0.0.1:8000/api/authors_viewset/?page=2
+
+Пагинация работает, если ходим изменить число выводимых авторов, то это можно сделать прямо через параметр `page_size`
+
+http://127.0.0.1:8000/api/authors_viewset/?page=1&page_size=10 теперь отображается 10 авторов на странице.
+
+# 4. Фильтрация
+
+Для интересующихся можно почитать перевод [документации](https://django.fun/docs/django-rest-framework/3.12/api-guide/filtering/)
+
+По умолчанию общие представления списков в REST framework возвращают весь набор запросов для менеджера модели. 
+Часто вы хотите, чтобы ваш API ограничивал элементы, возвращаемые набором запросов.
+
+
+## 4.1 Переопределение get_queryset
+
+Самый простой способ фильтровать набор запросов любого представления, которое является подклассом `GenericAPIView` 
+(`GenericAPIView`, `GenericViewSet`, `ReadOnlyModelViewSet`, `ModelViewSet`) - это переопределить метод `get_queryset()`.
+
+Вы можете определить параметры запроса URL, которые будут использоваться для фильтрации данных. 
+Например, если у вас есть модель `Author`, и вы хотите фильтровать авторов по содержанию определенного слова в их имени(а не так как они выводятся по умолчанию), 
+вы можете сделать это следующим образом.
+
+```python
+class AuthorViewSet(ModelViewSet):
+    queryset = Author.objects.all()
+    serializer_class = AuthorModelSerializer
+    pagination_class = AuthorPagination
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        name = self.request.query_params.get('name')
+        if name:
+            queryset = queryset.filter(name__contains=name)
+        return queryset
+
+    # Остальные методы
+```
+
+Рассмотрите следующие запросы:
+
+Сначала без фильтрации
+
+http://127.0.0.1:8000/api/authors_viewset/
+
+Затем с фильтрацией
+
+http://127.0.0.1:8000/api/authors_viewset/?name=blog
+
+## 4.2 Использование DjangoFilterBackend
+
+DRF также поддерживает стороннюю библиотеку `django-filter`, которая предоставляет более гибкий и мощный способ фильтрации данных. 
+Для использования `django-filter` с `DRF`, вам необходимо настроить фильтры в соответствующем классе фильтра.
+
+Установим её
+
+```python
+pip install django-filter
+```
+
+Затем добавьте `'django_filters'` к `INSTALLED_APPS` в корневой `urls.py`:
+
+Расширим `AuthorViewSet` во `views.py` приложения `api` 
+
+```python
+from django_filters.rest_framework import DjangoFilterBackend
+
+class AuthorViewSet(ModelViewSet):
+    # ...
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['name', 'email']  # Указываем для каких полем можем проводить фильтрацию
+```
+
+
+
+
+
+
+# 5. Тестирование
+
+
+
+# Практика окончена
+
+---
+
+# <a name="section-optional-block"></a> <u>Необязательный блок</u> (выполнение по желанию, на результат следующих практик влиять не будет)
+
+## 6. Документирование API
+
+## 7. Использование github для концепции continuous integration (ci)
