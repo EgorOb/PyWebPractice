@@ -1,4 +1,6 @@
 from rest_framework.views import APIView
+from rest_framework.generics import GenericAPIView
+from rest_framework.mixins import ListModelMixin, CreateModelMixin
 from rest_framework.response import Response
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt  # Чтобы post, put, patch, delete не требовали csrf токена (небезопасно)
@@ -63,3 +65,14 @@ class AuthorAPIView(APIView):
 
         author.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AuthorGenericAPIView(GenericAPIView, ListModelMixin, CreateModelMixin):
+    queryset = Author.objects.all()
+    serializer_class = AuthorSerializer
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
