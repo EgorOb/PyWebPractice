@@ -11,6 +11,7 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
 
 
 class AuthorAPIView(APIView):
@@ -111,8 +112,10 @@ class AuthorViewSet(ModelViewSet):
     queryset = Author.objects.all()
     serializer_class = AuthorModelSerializer
     pagination_class = AuthorPagination
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['name', 'email']  # Указываем для каких полем можем проводить фильтрацию
+    search_fields = ['email']  # Поля, по которым будет выполняться поиск
+    ordering_fields = ['name', 'email']  # Поля, по которым можно сортировать
 
     def get_queryset(self):
         queryset = super().get_queryset()

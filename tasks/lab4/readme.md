@@ -1,5 +1,28 @@
 # Оглавление
 
+* 1.Использование GenericApiView
+  * 1.1. Что ещё mixin и зачем они нужны?
+  * 1.2. Что ещё есть в rest_framework.generics?
+  * 1.3 Создание представления на GenericApiView
+* 2.Использование ViewSet
+  * 2.1 Создание представления
+    * 2.1.1 ViewSet
+    * 2.1.2 GenericViewSet
+    * 2.1.3 ReadOnlyModelViewSet
+    * 2.1.4 ModelViewSet
+  * 2.2 Маршрутизация
+  * 2.3 Поддерживание дополнительных действий
+  * 2.4 Ограничение поддерживаемых методов для всего представления
+* 3.Пагинация
+* 4.Фильтрация
+  * 4.1 Переопределение get_queryset
+  * 4.2 Использование DjangoFilterBackend
+* 5.Тестирование
+  * 5.1 Тестирование AuthorViewSet
+  * 5.2 Самостоятельно (по желанию)
+* Необязательный блок
+
+---
 
 # 1. Использование GenericApiView
 
@@ -686,7 +709,7 @@ http://127.0.0.1:8000/api/authors_viewset/?name=blog
 ## 4.2 Использование DjangoFilterBackend
 
 DRF также поддерживает стороннюю библиотеку `django-filter`, которая предоставляет более гибкий и мощный способ фильтрации данных. 
-Для использования `django-filter` с `DRF`, вам необходимо настроить фильтры в соответствующем классе фильтра.
+Для использования [django-filter](https://django-filter.readthedocs.io/en/stable/guide/rest_framework.html) с `DRF`, вам необходимо настроить фильтры в соответствующем классе фильтра.
 
 Установим её
 
@@ -707,14 +730,347 @@ class AuthorViewSet(ModelViewSet):
     filterset_fields = ['name', 'email']  # Указываем для каких полем можем проводить фильтрацию
 ```
 
+Если зайти в панель DRF, напримена на http://127.0.0.1:8000/api/authors_viewset/, то появится кнопка `Filters`
 
+![img_28.png](img_28.png)
 
+Где высветится поле
 
+![img_29.png](img_29.png)
 
+Впишите туда `anna_journey` и нажмите submit
+
+Произойдет фильтрование, а в адресной строке вы увидите путь http://127.0.0.1:8000/api/authors_viewset/?name=anna_journey&email=
+
+Аналогично можно проводить фильтрование по полям в адресной строке.
+
+В DRF есть свои встроенные фильтрации в модуле `from rest_framework import filters` такие как:
+
+* `SearchFilter` - Этот фильтр позволяет выполнить поиск по определенным полям модели. Он работает путем фильтрации queryset на основе заданного поискового запроса, переданного в параметре запроса URL
+
+* `OrderingFilter` - Этот фильтр позволяет сортировать результаты запроса по заданным полям модели. Он работает путем сортировки queryset на основе заданных полей, переданных в параметре запроса URL.
+
+Чтобы использовать эти фильтры, то необходимо прописать их в `filter_backends`, также при помощи `search_fields` и `ordering_fields` 
+прописываются поля участвующие в фильтрации для `SearchFilter` и `OrderingFilter` соответственно.
+
+Расширьте `AuthorViewSet`
+
+```python
+from rest_framework import filters
+
+class AuthorViewSet(ModelViewSet):
+    queryset = Author.objects.all()
+    serializer_class = AuthorModelSerializer
+    pagination_class = AuthorPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['name', 'email']  # Указываем для каких полем можем проводить фильтрацию
+    search_fields = ['email']  # Поля, по которым будет выполняться поиск
+    ordering_fields = ['name', 'email']  # Поля, по которым можно сортировать
+
+    # ...
+```
+
+Теперь в панели DRF в Filters появились новые поля
+
+![img_30.png](img_30.png)
+
+Поиск аналогично можно производить через адресную строку, по своим параметрам:
+
+* `search` - передаёте текст, который ищется в полях указанных в `search_fields`. Происходит поиск именно вхождения искомого 
+текста в текст записанного в поле, а не полное соответствие. Пример в каких строках БД таблицы Author в поле email содержится слово `user`
+
+http://127.0.0.1:8000/api/authors_viewset/?search=user
+
+* `ordering` - сортировка, которое принимает название поле по которому можно сортировать 
+(среди допустимых полей описанных в `ordering_fields`) результат запроса. Можно передать несколько полей через запятую. По умолчанию
+сортировка идёт по возрастанию, чтобы сделать по убыванию, то перед названием поля ставим `-`
+
+Пример вывода всех авторов отсортированных по имени
+
+http://127.0.0.1:8000/api/authors_viewset/?ordering=name
+
+Отсортированных по имени в обратном порядке
+
+http://127.0.0.1:8000/api/authors_viewset/?ordering=-name
+
+Запросы фильтрации можно комбинировать. Допустим вывести всех авторов у которых в имени есть user и отсортировать их в обратном порядке по полю email
+
+http://127.0.0.1:8000/api/authors_viewset/?search=user&ordering=-email
+
+Комбинированные запросы выполняются в том порядке как описаны в filter_backends, т.е. в нашем случае сначала выполняется
+`DjangoFilterBackend`, затем `filters.SearchFilter`, затем `filters.OrderingFilter`
 
 # 5. Тестирование
 
+Тестирование в Django REST Framework (DRF) обычно включает в себя проверку функциональности представлений API, 
+сериализаторов, роутинга и других компонентов вашего приложения. Вот несколько типов тестов, которые обычно используются при разработке в DRF:
 
+* `Тесты представлений (Views)`:
+
+  * Проверка корректности ответа на запросы GET, POST, PUT, PATCH, DELETE.
+  * Проверка обработки различных типов запросов (авторизованных и неавторизованных).
+  * Тестирование обработки ошибок и возвращаемых статусов.
+
+
+* `Тесты сериализаторов (Serializers)`:
+
+  * Проверка корректности сериализации данных.
+  * Тестирование валидации входных данных.
+  * Проверка обработки различных типов данных (валидных и невалидных).
+
+
+* `Тесты маршрутизации (Routing)`:
+
+  * Проверка соответствия URL и представлений.
+  * Тестирование динамической маршрутизации (например, в случае использования router в DRF).
+
+
+* `Тесты аутентификации и авторизации`:
+
+  * Проверка корректности работы системы аутентификации.
+  * Тестирование доступа к защищенным ресурсам для авторизованных и неавторизованных пользователей.
+
+
+* `Интеграционные тесты`:
+
+  * Проверка взаимодействия различных компонентов приложения.
+  * Тестирование сценариев использования на основе реальных данных.
+
+
+* `Тесты производительности`:
+
+  * Проверка скорости ответа API при обработке запросов с большим объемом данных.
+  * Тестирование масштабируемости приложения.
+
+Для написания тестов в DRF вы можете использовать стандартные инструменты тестирования Django, такие как `unittest` или `pytest`, 
+а также дополнительные библиотеки, специализированные для тестирования REST API, например, `django-rest-framework-test`. 
+Кроме того, DRF предоставляет некоторые вспомогательные классы для упрощения написания тестов, такие как `APITestCase`, `APIClient` и другие.
+
+## 5.1 Тестирование AuthorViewSet
+
+Тесты в Django пишутся в специальном файле `tests.py` в соответственном приложении. При запуске тестов в Django автоматически 
+формируется новая тестовая БД, с той же самой структурой что есть, но совершенно незаполненная.
+
+В файле `tests.py` приложения `app` пропишите
+
+```python
+from django.test import TestCase
+from rest_framework.test import APITestCase
+from rest_framework import status
+from django.urls import reverse
+from apps.db_train_alternative.models import Author
+from .serializers import AuthorModelSerializer
+
+
+class AuthorViewSetTestCase(APITestCase):
+    def setUp(self):
+        print("Создаём данные в БД")
+        self.author1 = Author.objects.create(name='John', email='john@example.com')
+        self.author2 = Author.objects.create(name='Alice', email='alice@example.com')
+
+    def test_list_authors(self):
+        print("Запуск теста test_list_authors")
+        print("______________________________")
+        url = reverse('author-list')  # Получаем URL ссылку
+        print(f"Проверяемы маршрут: {url}")
+        response = self.client.get(url)
+        print(f"Ответ от сервера: {response.status_code}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        authors = Author.objects.all()
+        serializer = AuthorModelSerializer(authors, many=True)
+        print(f"Сериализатор вернул из БД: {serializer.data}")
+        self.assertEqual(response.data, serializer.data)
+
+
+    def test_retrieve_author(self):
+        print("Запуск теста test_retrieve_author")
+        print("______________________________")
+        url = reverse('author-detail', kwargs={'pk': self.author1.pk})  # Укажите имя URL-шаблона и параметры
+        print(f"Проверяемы маршрут: {url}")
+        response = self.client.get(url)
+        print(f"Ответ от сервера: {response.status_code}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        author = Author.objects.get(pk=self.author1.pk)
+        serializer = AuthorModelSerializer(author)
+        print(f"Сериализатор вернул из БД: {serializer.data}")
+        self.assertEqual(response.data, serializer.data)
+
+    def test_create_author(self):
+        print("Запуск теста test_create_author")
+        print("______________________________")
+        url = reverse('author-list')  # Получаем URL ссылку
+        print(f"Проверяемы маршрут: {url}")
+        data = {'name': 'Bob', 'email': 'bob@example.com'}
+        response = self.client.post(url, data)
+        print(f"Ответ от сервера: {response.status_code}")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        author = Author.objects.get(name='Bob')
+        serializer = AuthorModelSerializer(author)
+        print(f"Сериализатор вернул из БД: {serializer.data}")
+        self.assertEqual(response.data, serializer.data)
+
+    def test_update_author(self):
+        print("Запуск теста test_update_author")
+        print("______________________________")
+        url = reverse('author-detail', kwargs={'pk': self.author1.pk})
+        print(f"Проверяемы маршрут: {url}")
+        data = {'name': 'John Doe', 'email': 'john.doe@example.com'}
+        response = self.client.put(url, data)
+        print(f"Ответ от сервера: {response.status_code}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        author = Author.objects.get(pk=self.author1.pk)
+        serializer = AuthorModelSerializer(author)
+        print(f"Сериализатор вернул из БД: {serializer.data}")
+        self.assertEqual(response.data, serializer.data)
+
+    def test_partial_update_author(self):
+        print("Запуск теста test_partial_update_author")
+        print("______________________________")
+        url = reverse('author-detail', kwargs={'pk': self.author1.pk})
+        print(f"Проверяемы маршрут: {url}")
+        data = {'name': 'John Doe'}
+        response = self.client.patch(url, data)
+        print(f"Ответ от сервера: {response.status_code}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        author = Author.objects.get(pk=self.author1.pk)
+        serializer = AuthorModelSerializer(author)
+        print(f"Сериализатор вернул из БД: {serializer.data}")
+        self.assertEqual(response.data, serializer.data)
+
+    def test_delete_author(self):
+        print("Запуск теста test_delete_author")
+        print("______________________________")
+        url = reverse('author-detail', kwargs={'pk': self.author1.pk})
+        print(f"Проверяемы маршрут: {url}")
+        response = self.client.delete(url)
+        print(f"Ответ от сервера: {response.status_code}")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Author.objects.filter(pk=self.author1.pk).exists())  # Проверка, что теперь этого автора не существует
+```
+
+Для создания теста создаётся тестовый класс наследующийся от `APITestCase`. Каждый тест записывается как метод данного класса и обязательно должен начинаться 
+со слова `test`, далее можно писать любое название. 
+
+При проверке методов API чаще следуют следующему алгоритму:
+1. Определяют путь по которому будут проверять доступность endpoint, для этого можно написать путь вручную или воспользоваться функцией
+`reverse` из `from django.urls import reverse`, чтобы по имени маршрута получить URL путь этого маршрута, как пример 
+`url = reverse('author-list')` запишет в переменную `url` значение `/api/authors/`
+
+
+2. Как определились с маршрутом, то если это необходимо, то формируем данные которые будем передавать в запросе, допустим для POST, PUT, PATCH запроса
+
+
+3. Отправляем запрос на представление, это можно сделать при помощи объекта `APIClient`, который существует в атрибуте `self.client`. По своему
+существу он похож на requests. Преимущества объекта `self.client` в том, что для запуска тестов не нужно, чтобы сервер был запущен физически,
+так как реальный запрос не отправляется, а просто проверяется работа представлений. 
+
+    > В тестах Django `self.client` представляет собой клиент HTTP, который позволяет выполнять HTTP-запросы к вашему приложению Django в контексте теста. 
+    Он предоставляет удобный интерфейс для отправки запросов и получения ответов без необходимости запуска сервера. Когда вы вызываете 
+    методы `self.client.get()`, `self.client.post()`, `self.client.put()` и т.д., вы создаете HTTP-запрос к вашему приложению 
+    Django и получаете HTTP-ответ в виде объекта HttpResponse. Это позволяет вам проверять поведение вашего приложения в различных сценариях и убеждаться, что оно работает корректно.
+
+4. Проведение проверок полученных результатов с контрольными значениями. 
+Все сравнивания в тестах полученного значения с необходимым проходят с использованием `self.assert***`, где `***` это имя 
+блока для проверки определенного теста. Допустим `self.assertEqual(a, b)` сравнивает, что `a == b`, а 
+`self.assertFalse(a)` сравнивает, что `a == False`
+
+___
+
+Запустите файл `tests.py` приложения `api`
+
+![img_31.png](img_31.png)
+
+Вы можете увидеть, что тесты запускаются не по порядку как написаны, а потому как называются в отсортированном виде по имени теста,
+это необходимо учитывать если планируете передавать данные между запускаемыми тестами (допустим добавили строку в БД, а в другом тесте
+хотите использовать этот результат), но по умолчанию Django очищает БД каждый раз как тест завершается, чтобы новый тест был с пустой БД или 
+заполненной данными определенными в `def setUp(self)`, данный метод Django запускает каждый раз после завершения `каждого теста` в своём классе.
+
+После завершения тестов в файле `tests.py` тестовая БД самостоятельно.
+
+Когда необходимо перед тестами создать БД, которая будет хоть как-то заполнена и чтобы это не делать в каждом тесте, то можно создать фикстуры на базе которых будут заполняться тестовые БД, 
+как мы уже поняли в момент теста БД полностью пустая и после каждого теста БД будет откатываться к состоянию которое было определено на момент начало данного теста
+
+Чтобы создать фикстуры, то необходимо:
+
+1. Создать директорию(папку) `fixtures` внутри тестируемого приложения, в нашем случает это приложение `api`
+
+
+2. В директории `fixtures` создайте файл с именем, например, `testdata.json` (или любое другое имя с расширением .json), и заполните его данными в формате JSON
+
+```json
+[
+    {
+        "model": "db_train_alternative.author",
+        "pk": 1,
+        "fields": {
+            "name": "John_test",
+            "email": "john_test@example.com"
+        }
+    },
+    {
+        "model": "db_train_alternative.author",
+        "pk": 2,
+        "fields": {
+            "name": "Alice_test",
+            "email": "alice_test@example.com"
+        }
+    }
+]
+```
+3. В тестовом классе `AuthorViewSetTestCase` используйте классовый атрибут `fixtures` для указания имени файла фикстуры в вашем тестовом случае.
+В атрибут `fixtures` передаётся список фикстур.
+
+```python
+class AuthorViewSetTestCase(APITestCase):
+    fixtures = ['testdata.json']
+    
+    # Остальные методы ...
+```
+Чтобы проверить, что фикстура действительно применилась, то в `test_list_authors` проверим сколь записей есть в таблице Автор
+
+```python
+def test_list_authors(self):
+    print("Запуск теста test_list_authors")
+    print("______________________________")
+    print(f'В таблице автор {Author.objects.count()} значения')
+    # ...
+```
+
+![img_32.png](img_32.png)
+
+В итоге при запуске тестов будет 4 значения
+
+![img_33.png](img_33.png)
+
+
+Последнее, что осталось, так это запустить тесты через команду 
+
+```python
+python manage.py test apps api
+```
+
+![img_34.png](img_34.png)
+
+Если было бы необходимо запускать все тесты в проект, то просто не указываем конкретный проект в котором Django будет искать тесты.
+
+В нашем случае это
+```python
+python manage.py test apps
+```
+Так как все приложения лежат в папке apps, если бы этого не было, то писали бы 
+
+```python
+python manage.py test
+```
+
+Если по каким-то причинам обязательно необходимо, чтобы данные в БД сохранялись между сессиями, то можно воспользоваться параметрами при запуске `test --keepdb` (просто для ознакомления).
+Эта опция сохраняет тестовую базу данных между несколькими запусками. 
+
+Дополнительно (если необходимо) про тестирование в Django можете прочитать [здесь](https://colab.research.google.com/drive/17cYDRQ-MnQETVJxURrOPzli65leVVxcf)
+
+## 5.2 Самостоятельно (по желанию)
+
+Если ранее создавали API к таблице БД, то протестируйте вашу API.
 
 # Практика окончена
 
