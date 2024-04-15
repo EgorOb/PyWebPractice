@@ -18,7 +18,7 @@ class AuthorViewSetTestCase(APITestCase):
         print("Запуск теста test_list_authors")
         print("______________________________")
         print(f'В таблице автор {Author.objects.count()} значения')
-        url = reverse('author-list')  # Получаем URL ссылку
+        url = reverse('authors-viewset-list')  # Получаем URL ссылку
         print(f"Проверяемы маршрут: {url}")
         response = self.client.get(url)
         print(f"Ответ от сервера: {response.status_code}")
@@ -26,13 +26,13 @@ class AuthorViewSetTestCase(APITestCase):
         authors = Author.objects.all()
         serializer = AuthorModelSerializer(authors, many=True)
         print(f"Сериализатор вернул из БД: {serializer.data}")
-        self.assertEqual(response.data, serializer.data)
+        self.assertEqual(response.data['results'], serializer.data)
 
 
     def test_retrieve_author(self):
         print("Запуск теста test_retrieve_author")
         print("______________________________")
-        url = reverse('author-detail', kwargs={'pk': self.author1.pk})  # Укажите имя URL-шаблона и параметры
+        url = reverse('authors-viewset-detail', kwargs={'pk': self.author1.pk})  # Укажите имя URL-шаблона и параметры
         print(f"Проверяемы маршрут: {url}")
         response = self.client.get(url)
         print(f"Ответ от сервера: {response.status_code}")
@@ -45,7 +45,7 @@ class AuthorViewSetTestCase(APITestCase):
     def test_create_author(self):
         print("Запуск теста test_create_author")
         print("______________________________")
-        url = reverse('author-list')  # Получаем URL ссылку
+        url = reverse('authors-viewset-list')  # Получаем URL ссылку
         print(f"Проверяемы маршрут: {url}")
         data = {'name': 'Bob', 'email': 'bob@example.com'}
         response = self.client.post(url, data)
@@ -59,7 +59,7 @@ class AuthorViewSetTestCase(APITestCase):
     def test_update_author(self):
         print("Запуск теста test_update_author")
         print("______________________________")
-        url = reverse('author-detail', kwargs={'pk': self.author1.pk})
+        url = reverse('authors-viewset-detail', kwargs={'pk': self.author1.pk})
         print(f"Проверяемы маршрут: {url}")
         data = {'name': 'John Doe', 'email': 'john.doe@example.com'}
         response = self.client.put(url, data)
@@ -73,7 +73,7 @@ class AuthorViewSetTestCase(APITestCase):
     def test_partial_update_author(self):
         print("Запуск теста test_partial_update_author")
         print("______________________________")
-        url = reverse('author-detail', kwargs={'pk': self.author1.pk})
+        url = reverse('authors-viewset-detail', kwargs={'pk': self.author1.pk})
         print(f"Проверяемы маршрут: {url}")
         data = {'name': 'John Doe'}
         response = self.client.patch(url, data)
@@ -87,7 +87,7 @@ class AuthorViewSetTestCase(APITestCase):
     def test_delete_author(self):
         print("Запуск теста test_delete_author")
         print("______________________________")
-        url = reverse('author-detail', kwargs={'pk': self.author1.pk})
+        url = reverse('authors-viewset-detail', kwargs={'pk': self.author1.pk})
         print(f"Проверяемы маршрут: {url}")
         response = self.client.delete(url)
         print(f"Ответ от сервера: {response.status_code}")
