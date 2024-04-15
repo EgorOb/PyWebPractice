@@ -40,6 +40,12 @@ class Author(models.Model):
     class Meta:
         verbose_name = "Автор"
         verbose_name_plural = "Авторы"
+        #
+        # permissions = [
+        #     ("can_view_author", "Могу посмотреть "),
+        #     ("can_change_author", "Могу изменить"),
+        #     ("can_delete_author", "Могу создать"),
+        # ]
 
 
 class AuthorProfile(models.Model):

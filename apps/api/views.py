@@ -145,7 +145,7 @@ class AuthorViewSet(ModelViewSet):
     search_fields = ['email']  # Поля, по которым будет выполняться поиск
     ordering_fields = ['name', 'email']  # Поля, по которым можно сортировать
 
-    permission_classes = [permissions.DjangoObjectPermissions]
+    permission_classes = [permissions.DjangoModelPermissions]
 
     def get_queryset(self):
         queryset = super().get_queryset()
