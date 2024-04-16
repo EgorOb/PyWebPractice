@@ -13,6 +13,8 @@ from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from rest_framework import permissions
+from rest_framework import authentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 
 class AuthorAPIView(APIView):
@@ -104,7 +106,9 @@ class AuthorGenericAPIView(GenericAPIView, RetrieveModelMixin, ListModelMixin, C
     serializer_class = AuthorModelSerializer
 
     # Переопределяем атрибут permission_classes для указания нашего собственного разрешения
-    permission_classes = [CustomPermission]
+    # permission_classes = [CustomPermission]
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
     def get(self, request, *args, **kwargs):
         if kwargs.get(self.lookup_field):
